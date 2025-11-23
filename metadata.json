@@ -1,0 +1,8 @@
+{
+  "name": "BasketStats Pro",
+  "description": "A comprehensive basketball team management and statistics application. Manage leagues, teams, players, and match schedules. Import stats via CSV or extract them from score sheet photos using Gemini AI to generate professional box score dashboards.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
