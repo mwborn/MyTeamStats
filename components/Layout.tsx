@@ -1,14 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { getCurrentUser, hasPermission, logout } from '../services/auth';
-import { User } from '../types';
+import { User, AppData } from '../types';
+import { getDB } from '../services/storage';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [appSettings, setAppSettings] = useState(getDB().settings);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    // Apply theme
+    const root = document.documentElement;
+    if (appSettings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    // Update title
+    document.title = appSettings.appName;
+  }, [appSettings]);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -16,6 +30,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate('/login');
     }
     setUser(currentUser);
+    // Refresh settings on navigation to reflect changes immediately
+    setAppSettings(getDB().settings);
   }, [location, navigate]);
 
   const handleLogout = () => {
@@ -38,12 +54,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/report', label: 'Game Dashboard', icon: LayoutDashboard },
     { to: '/team-stats', label: 'Team Stats', icon: PieChart },
     { to: '/users', label: 'User Management', icon: Shield },
+    { to: '/setup', label: 'Setup', icon: Settings },
   ];
 
   const visibleItems = allNavItems.filter(item => hasPermission(user.role, item.to));
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
@@ -54,14 +71,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform duration-200 ease-in-out
+        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white dark:bg-slate-950 dark:border-r dark:border-slate-800 transform transition-transform duration-200 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:relative lg:translate-x-0
         flex flex-col
       `}>
         <div className="h-16 flex items-center justify-between px-6 bg-orange-600 shrink-0">
-          <div className="font-bold text-xl flex items-center gap-2">
-            <span className="text-2xl">🏀</span> BasketStats
+          <div className="font-bold text-xl flex items-center gap-2 overflow-hidden">
+            {appSettings.appLogoUrl ? (
+                <img src={appSettings.appLogoUrl} alt="Logo" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+                <span className="text-2xl shrink-0">🏀</span>
+            )}
+            <span className="truncate">{appSettings.appName}</span>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-white">
             <X size={24} />
@@ -85,13 +107,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           ))}
         </nav>
         
-        <div className="p-4 bg-slate-800 shrink-0">
+        <div className="p-4 bg-slate-800 dark:bg-slate-900 shrink-0">
             <div className="flex items-center gap-3 mb-4 px-2">
-                <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center font-bold text-white">
-                    {user.name.charAt(0)}
+                <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center font-bold text-white shrink-0">
+                    {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
-                    <div className="font-bold text-sm truncate">{user.name}</div>
+                    <div className="font-bold text-sm truncate text-white">{user.name}</div>
                     <div className="text-xs text-slate-400 capitalize">{user.role}</div>
                 </div>
             </div>
@@ -107,11 +129,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header (Mobile Only) */}
-        <header className="lg:hidden h-16 bg-white border-b flex items-center px-4 justify-between">
-          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-600">
+        <header className="lg:hidden h-16 bg-white dark:bg-slate-800 border-b dark:border-slate-700 flex items-center px-4 justify-between">
+          <button onClick={() => setIsSidebarOpen(true)} className="text-slate-600 dark:text-slate-300">
             <Menu size={24} />
           </button>
-          <span className="font-bold text-slate-800">BasketStats Pro</span>
+          <span className="font-bold text-slate-800 dark:text-white">{appSettings.appName}</span>
           <div className="w-6" /> {/* Spacer */}
         </header>
 

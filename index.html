@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +11,14 @@
       @media print {
         .no-print { display: none !important; }
         .print-full { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+      }
+      /* Custom font for digital clock style */
+      @font-face {
+        font-family: 'Digital';
+        src: url('https://fonts.cdnfonts.com/s/16041/DS-DIGI.woff') format('woff');
+      }
+      .font-digital {
+        font-family: 'Digital', sans-serif;
       }
     </style>
   <script type="importmap">
@@ -27,7 +35,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900">
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-200">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

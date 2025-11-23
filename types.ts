@@ -81,6 +81,12 @@ export interface User {
   name: string;
 }
 
+export interface Settings {
+    theme: 'light' | 'dark';
+    appName: string;
+    appLogoUrl?: string;
+}
+
 export interface AppData {
   leagues: League[];
   teams: Team[];
@@ -88,4 +94,5 @@ export interface AppData {
   matches: Match[];
   stats: PlayerStats[];
   users: User[];
+  settings: Settings;
 }

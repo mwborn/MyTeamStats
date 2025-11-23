@@ -39,7 +39,12 @@ const INITIAL_DATA: AppData = {
     { id: 'u1', username: 'admin', password: 'password', role: 'admin', name: 'Administrator' },
     { id: 'u2', username: 'coach', password: 'password', role: 'coach', name: 'Coach Carter' },
     { id: 'u3', username: 'player', password: 'password', role: 'player', name: 'John Doe' }
-  ]
+  ],
+  settings: {
+    theme: 'light',
+    appName: 'BasketStats Pro',
+    appLogoUrl: ''
+  }
 };
 
 export const getDB = (): AppData => {
@@ -50,12 +55,24 @@ export const getDB = (): AppData => {
   }
   
   const parsed = JSON.parse(data);
-  // Migration logic: if users array is missing, add default users
+  let needsUpdate = false;
+
+  // Migration logic: add users if missing
   if (!parsed.users) {
       parsed.users = INITIAL_DATA.users;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      needsUpdate = true;
+  }
+
+  // Migration logic: add settings if missing
+  if (!parsed.settings) {
+      parsed.settings = INITIAL_DATA.settings;
+      needsUpdate = true;
   }
   
+  if (needsUpdate) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+  }
+
   return parsed;
 };
 

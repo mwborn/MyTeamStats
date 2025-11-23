@@ -33,7 +33,7 @@ export const hasPermission = (role: UserRole, path: string): boolean => {
 
     const commonRoutes = ['/', '/schedule', '/report', '/team-stats'];
     const manageRoutes = ['/roster', '/import'];
-    const adminRoutes = ['/users'];
+    const adminRoutes = ['/users', '/setup'];
 
     if (role === 'admin') return true;
 
