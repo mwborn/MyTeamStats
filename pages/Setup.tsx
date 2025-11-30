@@ -47,10 +47,8 @@ const Setup: React.FC = () => {
     saveDB(newData);
     setStatus("Settings saved successfully! Redirecting...");
     
-    // Immediately apply theme to the document
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
-    // Navigate after a short delay to show the message
     setTimeout(() => navigate('/'), 1500);
   };
   

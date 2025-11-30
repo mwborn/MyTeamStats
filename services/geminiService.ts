@@ -19,9 +19,10 @@ export const analyzeScoreSheet = async (
     Analyze this basketball score sheet image. 
     Extract the statistics for the players listed here: ${playerContext}.
     Ignore any players not in this list.
+    The 'minutes' column refers to total minutes played as an integer.
     Map columns like "Pts", "Fouls", "2Pt Made", etc., to the JSON schema.
     Return a JSON array of player statistics using the provided Player IDs.
-    Set 'minutes' to "00:00" if not visible. Default other missing stats to 0.
+    Set 'minutes' to 0 if not visible. Default other missing stats to 0.
   `;
 
   const responseSchema = {
@@ -31,7 +32,7 @@ export const analyzeScoreSheet = async (
       properties: {
         playerId: { type: Type.STRING, description: "The ID of the player from the context." },
         points: { type: Type.NUMBER },
-        minutes: { type: Type.STRING },
+        minutes: { type: Type.NUMBER },
         twoPtMade: { type: Type.NUMBER },
         twoPtAtt: { type: Type.NUMBER },
         threePtMade: { type: Type.NUMBER },
@@ -75,7 +76,7 @@ export const analyzeScoreSheet = async (
     return data.map(stat => ({
       matchId,
       playerId: stat.playerId || '',
-      minutes: stat.minutes || "00:00",
+      minutes: stat.minutes || 0,
       points: stat.points || 0,
       twoPtMade: stat.twoPtMade || 0,
       twoPtAtt: stat.twoPtAtt || 0,

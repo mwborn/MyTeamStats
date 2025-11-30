@@ -65,7 +65,9 @@ export const parseCSVStats = (
     if (!playerId) continue;
 
     const stat: PlayerStats = {
-      matchId, playerId, minutes: safeGet(40), points,
+      matchId, playerId,
+      minutes: parseNum(safeGet(44)), // Muns. Played (integer)
+      points,
       twoPtMade: parseNum(safeGet(2)), twoPtAtt: parseNum(safeGet(3)),
       threePtMade: parseNum(safeGet(5)), threePtAtt: parseNum(safeGet(6)),
       ftMade: parseNum(safeGet(12)), ftAtt: parseNum(safeGet(13)),

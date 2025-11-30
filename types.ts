@@ -43,7 +43,7 @@ export interface Match {
 export interface PlayerStats {
   matchId: string;
   playerId: string;
-  minutes: string;
+  minutes: number;
   
   // Shooting
   points: number;
