@@ -13,8 +13,6 @@ const Login: React.FC = () => {
     e.preventDefault();
     const user = login(username, password);
     if (user) {
-      // FIX: Removed window.location.reload(). 
-      // The navigate call is sufficient to trigger the re-render of protected components.
       navigate('/');
     } else {
       setError('Invalid username or password');

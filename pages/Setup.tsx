@@ -47,9 +47,10 @@ const Setup: React.FC = () => {
     saveDB(newData);
     setStatus("Settings saved successfully! Redirecting...");
     
-    // Update theme immediately for visual feedback
+    // Immediately apply theme to the document
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
+    // Navigate after a short delay to show the message
     setTimeout(() => navigate('/'), 1500);
   };
   
@@ -61,7 +62,6 @@ const Setup: React.FC = () => {
 
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-8">
         
-        {/* App Name */}
         <div>
            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Application Title</label>
            <input
@@ -73,7 +73,6 @@ const Setup: React.FC = () => {
            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">This title appears in the browser tab and sidebar.</p>
         </div>
 
-        {/* Theme */}
         <div>
            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Theme</label>
            <div className="grid grid-cols-2 gap-4">
@@ -88,7 +87,6 @@ const Setup: React.FC = () => {
            </div>
         </div>
 
-        {/* Logo */}
         <div>
             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Application Logo</label>
             <div className="flex items-center gap-6 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-700/50">

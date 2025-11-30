@@ -28,7 +28,6 @@ export const getCurrentUser = (): User | null => {
 };
 
 export const hasPermission = (role: UserRole, path: string): boolean => {
-    // Normalize path to base route
     const route = path.split('/')[1] ? '/' + path.split('/')[1] : '/';
 
     const commonRoutes = ['/', '/schedule', '/report', '/team-stats'];

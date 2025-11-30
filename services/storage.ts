@@ -57,13 +57,11 @@ export const getDB = (): AppData => {
   const parsed = JSON.parse(data);
   let needsUpdate = false;
 
-  // Migration logic: add users if missing
   if (!parsed.users) {
       parsed.users = INITIAL_DATA.users;
       needsUpdate = true;
   }
 
-  // Migration logic: add settings if missing
   if (!parsed.settings) {
       parsed.settings = INITIAL_DATA.settings;
       needsUpdate = true;

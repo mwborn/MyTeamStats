@@ -13,14 +13,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    // Apply theme
     const root = document.documentElement;
     if (appSettings.theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-    // Update title
     document.title = appSettings.appName;
   }, [appSettings]);
 
@@ -30,7 +28,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate('/login');
     }
     setUser(currentUser);
-    // Refresh settings on navigation to reflect changes immediately
     setAppSettings(getDB().settings);
   }, [location, navigate]);
 
@@ -39,12 +36,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       navigate('/login');
   };
 
-  // If on login page, render children only (no sidebar)
   if (location.pathname === '/login') {
       return <>{children}</>;
   }
 
-  if (!user) return null; // Wait for redirect
+  if (!user) return null;
 
   const allNavItems = [
     { to: '/', label: 'Home', icon: BarChart3 },
@@ -61,7 +57,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
-      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 lg:hidden"
@@ -69,7 +64,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white dark:bg-slate-950 dark:border-r dark:border-slate-800 transform transition-transform duration-200 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -126,18 +120,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header (Mobile Only) */}
         <header className="lg:hidden h-16 bg-white dark:bg-slate-800 border-b dark:border-slate-700 flex items-center px-4 justify-between">
           <button onClick={() => setIsSidebarOpen(true)} className="text-slate-600 dark:text-slate-300">
             <Menu size={24} />
           </button>
           <span className="font-bold text-slate-800 dark:text-white">{appSettings.appName}</span>
-          <div className="w-6" /> {/* Spacer */}
+          <div className="w-6" />
         </header>
 
-        {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8">
           {children}
         </div>

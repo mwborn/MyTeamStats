@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Roster from './pages/Roster';
@@ -9,18 +9,11 @@ import GameReport from './pages/GameReport';
 import TeamStats from './pages/TeamStats';
 import UserManagement from './pages/UserManagement';
 import Login from './pages/Login';
-import Setup from './pages/Setup'; // Import the new Setup page
+import Setup from './pages/Setup';
 import { getCurrentUser, hasPermission } from './services/auth';
-import { User } from './types';
 
-// Guard Component
 const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
-  const [user, setUser] = useState<User | null>(getCurrentUser());
-  
-  // Re-check user on render to prevent stale state issues
-  useEffect(() => {
-     setUser(getCurrentUser());
-  }, []);
+  const user = getCurrentUser();
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -45,14 +38,14 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           
-          <Route path="/" element={<ProtectedRoute path="/"><Home /></ProtectedRoute>} />
-          <Route path="/roster" element={<ProtectedRoute path="/roster"><Roster /></ProtectedRoute>} />
-          <Route path="/schedule" element={<ProtectedRoute path="/schedule"><Schedule /></ProtectedRoute>} />
-          <Route path="/import" element={<ProtectedRoute path="/import"><Import /></ProtectedRoute>} />
-          <Route path="/report" element={<ProtectedRoute path="/report"><GameReport /></ProtectedRoute>} />
-          <Route path="/team-stats" element={<ProtectedRoute path="/team-stats"><TeamStats /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute path="/users"><UserManagement /></ProtectedRoute>} />
-          <Route path="/setup" element={<ProtectedRoute path="/setup"><Setup /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
+          <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
+          <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
+          <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
+          <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
+          <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
+          <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
+          <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
         </Routes>
       </Layout>
     </HashRouter>

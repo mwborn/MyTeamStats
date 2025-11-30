@@ -1,15 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { PlayerStats } from "../types";
+import { PlayerStats, Player } from "../types";
 
-// FIX: Updated to align with Gemini API guidelines.
-// The API key must be obtained exclusively from `process.env.API_KEY` and is assumed to be available.
 const getAIClient = () => {
+  // Use API_KEY directly from environment variables as per guidelines
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 export const analyzeScoreSheet = async (
   imageBase64: string, 
-  players: {id: string, number: number, name: string}[],
+  players: Player[],
   matchId: string
 ): Promise<PlayerStats[]> => {
   const ai = getAIClient();
@@ -17,25 +16,20 @@ export const analyzeScoreSheet = async (
   const playerContext = players.map(p => `#${p.number} ${p.name} (ID: ${p.id})`).join(', ');
 
   const prompt = `
-    Analyze this basketball score sheet image (or scoreboard). 
+    Analyze this basketball score sheet image. 
     Extract the statistics for the players listed here: ${playerContext}.
-    
-    If the image contains data for players not in my list, ignore them.
-    If the image contains columns like "Pts", "Fouls", "2Pt Made", etc., map them to the JSON schema.
-    
-    Return a JSON array of player statistics. 
-    Use the provided Player ID in the JSON.
-    Estimate missing values if the image is a simple scoreboard (e.g., only points and fouls).
-    Set 'minutes' to "00:00:00" if not visible.
+    Ignore any players not in this list.
+    Map columns like "Pts", "Fouls", "2Pt Made", etc., to the JSON schema.
+    Return a JSON array of player statistics using the provided Player IDs.
+    Set 'minutes' to "00:00" if not visible. Default other missing stats to 0.
   `;
 
-  // Schema for structured output
   const responseSchema = {
     type: Type.ARRAY,
     items: {
       type: Type.OBJECT,
       properties: {
-        playerId: { type: Type.STRING, description: "The ID of the player from the context provided." },
+        playerId: { type: Type.STRING, description: "The ID of the player from the context." },
         points: { type: Type.NUMBER },
         minutes: { type: Type.STRING },
         twoPtMade: { type: Type.NUMBER },
@@ -78,11 +72,10 @@ export const analyzeScoreSheet = async (
     
     const data = JSON.parse(jsonText) as Partial<PlayerStats>[];
 
-    // Hydrate missing fields with defaults and add matchId
     return data.map(stat => ({
       matchId,
       playerId: stat.playerId || '',
-      minutes: stat.minutes || "00:00:00",
+      minutes: stat.minutes || "00:00",
       points: stat.points || 0,
       twoPtMade: stat.twoPtMade || 0,
       twoPtAtt: stat.twoPtAtt || 0,
