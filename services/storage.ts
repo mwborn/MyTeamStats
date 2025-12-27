@@ -1,6 +1,9 @@
-import { AppData, League, Match, Player, PlayerStats, Team, User } from '../types';
+import { AppData } from '../types';
+import { db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-const STORAGE_KEY = 'basketstats_db_v1';
+const DB_COLLECTION = 'data';
+const DB_DOC_ID = 'main';
 
 const INITIAL_DATA: AppData = {
   leagues: [
@@ -47,37 +50,35 @@ const INITIAL_DATA: AppData = {
   }
 };
 
-export const getDB = (): AppData => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DATA));
+export const getDB = async (): Promise<AppData> => {
+  const docRef = doc(db, DB_COLLECTION, DB_DOC_ID);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    // Basic migration for new fields if needed
+    const data = docSnap.data() as AppData;
+    let needsUpdate = false;
+    if (!data.users) {
+      data.users = INITIAL_DATA.users;
+      needsUpdate = true;
+    }
+    if (!data.settings) {
+      data.settings = INITIAL_DATA.settings;
+      needsUpdate = true;
+    }
+    if(needsUpdate) {
+      await saveDB(data);
+    }
+    return data;
+  } else {
+    // Doc doesn't exist, so initialize it
+    console.log("No such document! Initializing database...");
+    await setDoc(docRef, INITIAL_DATA);
     return INITIAL_DATA;
   }
-  
-  const parsed = JSON.parse(data);
-  let needsUpdate = false;
-
-  if (!parsed.users) {
-      parsed.users = INITIAL_DATA.users;
-      needsUpdate = true;
-  }
-
-  if (!parsed.settings) {
-      parsed.settings = INITIAL_DATA.settings;
-      needsUpdate = true;
-  }
-  
-  if (needsUpdate) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-  }
-
-  return parsed;
 };
 
-export const saveDB = (data: AppData) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export const saveDB = async (data: AppData) => {
+  const docRef = doc(db, DB_COLLECTION, DB_DOC_ID);
+  await setDoc(docRef, data);
 };
-
-export const getTeam = (id: string) => getDB().teams.find(t => t.id === id);
-export const getLeague = (id: string) => getDB().leagues.find(l => l.id === id);
-export const getMatch = (id: string) => getDB().matches.find(m => m.id === id);

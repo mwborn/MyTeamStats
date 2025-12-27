@@ -1,46 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
-import { getCurrentUser, hasPermission, logout } from '../services/auth';
-import { User, AppData } from '../types';
-import { getDB } from '../services/storage';
+import { hasPermission } from '../services/auth';
+import { AppContext } from '../context/AppContext';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [appSettings, setAppSettings] = useState(getDB().settings);
+  const { user, appData, logout: handleLogout, loadingData } = useContext(AppContext);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const appSettings = appData?.settings;
+
   useEffect(() => {
-    const root = document.documentElement;
-    if (appSettings.theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    if (appSettings) {
+      const root = document.documentElement;
+      if (appSettings.theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      document.title = appSettings.appName;
     }
-    document.title = appSettings.appName;
   }, [appSettings]);
-
-  useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser && location.pathname !== '/login') {
-        navigate('/login');
-    }
-    setUser(currentUser);
-    setAppSettings(getDB().settings);
-  }, [location, navigate]);
-
-  const handleLogout = () => {
-      logout();
-      navigate('/login');
-  };
-
+  
   if (location.pathname === '/login') {
       return <>{children}</>;
   }
 
-  if (!user) return null;
+  if (!user || !appSettings) return null;
 
   const allNavItems = [
     { to: '/', label: 'Home', icon: BarChart3 },

@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { getDB } from '../services/storage';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import { AppData, Match, PlayerStats, Team } from '../types';
-import { Download, ChevronDown } from 'lucide-react';
+import { Download, ChevronDown, Loader2 } from 'lucide-react';
 
 const GameReport: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData: data, loadingData } = useContext(AppContext);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
   const [viewTeamId, setViewTeamId] = useState<string>('');
-
-  useEffect(() => {
-    setData(getDB());
-  }, []);
 
   useEffect(() => {
       if (selectedMatchId && data) {
@@ -26,7 +22,13 @@ const GameReport: React.FC = () => {
       }
   }, [selectedMatchId, data]);
 
-  if (!data) return <div>Loading...</div>;
+  if (loadingData || !data) {
+     return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin text-orange-600" size={32} />
+      </div>
+    );
+  }
 
   const matches = data.matches.filter(m => !selectedLeagueId || m.leagueId === selectedLeagueId);
   const currentMatch = data.matches.find(m => m.id === selectedMatchId);

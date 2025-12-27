@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { getDB, saveDB } from '../services/storage';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import { AppData } from '../types';
-import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Setup: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
   const [appName, setAppName] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [logoUrl, setLogoUrl] = useState<string | undefined>('');
@@ -13,12 +13,12 @@ const Setup: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const db = getDB();
-    setData(db);
-    setAppName(db.settings.appName);
-    setTheme(db.settings.theme);
-    setLogoUrl(db.settings.appLogoUrl);
-  }, []);
+    if (data) {
+      setAppName(data.settings.appName);
+      setTheme(data.settings.theme);
+      setLogoUrl(data.settings.appLogoUrl);
+    }
+  }, [data]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,7 +34,7 @@ const Setup: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!data) return;
     const newData: AppData = {
         ...data,
@@ -44,7 +44,7 @@ const Setup: React.FC = () => {
             appLogoUrl: logoUrl,
         }
     };
-    saveDB(newData);
+    await updateAppData(newData);
     setStatus("Settings saved successfully! Redirecting...");
     
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -52,7 +52,13 @@ const Setup: React.FC = () => {
     setTimeout(() => navigate('/'), 1500);
   };
   
-  if (!data) return <div>Loading...</div>;
+  if (loadingData || !data) {
+     return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin text-orange-600" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-20">

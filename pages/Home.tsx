@@ -1,23 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { getDB } from '../services/storage';
+import React, { useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import { AppData, Player, PlayerStats, User } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getCurrentUser } from '../services/auth';
+import { Loader2 } from 'lucide-react';
 
 const Home: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isDark, setIsDark] = useState(false);
+  const { appData: data, user, loadingData } = useContext(AppContext);
 
-  useEffect(() => {
-    const dbData = getDB();
-    setData(dbData);
-    setUser(getCurrentUser());
-    setIsDark(dbData.settings.theme === 'dark');
-  }, []);
+  if (loadingData || !data || !user) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin text-orange-600" size={32} />
+      </div>
+    );
+  }
 
-  if (!data || !user) return <div>Loading...</div>;
-
+  const isDark = data.settings.theme === 'dark';
   const mainTeam = data.teams.find(t => t.isMain);
   const playerStatsMap = new Map<string, { name: string, points: number, assists: number, rebounds: number }>();
 

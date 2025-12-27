@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { getDB, saveDB } from '../services/storage';
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import { AppData, User, UserRole } from '../types';
-import { Plus, Trash2, Edit2, Save, X, Shield, User as UserIcon } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Shield, User as UserIcon, Loader2 } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<Partial<User>>({});
 
-  useEffect(() => {
-    setData(getDB());
-  }, []);
-
-  if (!data) return <div>Loading...</div>;
+  if (loadingData || !data) {
+     return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="animate-spin text-orange-600" size={32} />
+      </div>
+    );
+  }
 
   const startEdit = (user?: User) => {
     if (user) {
@@ -29,7 +31,7 @@ const UserManagement: React.FC = () => {
     setUserForm({});
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!userForm.username || !userForm.password || !userForm.name) return;
 
     let newUsers = [...data.users];
@@ -48,16 +50,14 @@ const UserManagement: React.FC = () => {
     }
 
     const newData = { ...data, users: newUsers };
-    saveDB(newData);
-    setData(newData);
+    await updateAppData(newData);
     cancelEdit();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Delete this user?")) {
         const newData = { ...data, users: data.users.filter(u => u.id !== id) };
-        saveDB(newData);
-        setData(newData);
+        await updateAppData(newData);
     }
   };
 

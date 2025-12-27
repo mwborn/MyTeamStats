@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/auth';
-import { Lock, User as UserIcon } from 'lucide-react';
+import { AppContext } from '../context/AppContext';
+import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AppContext);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = login(username, password);
-    if (user) {
+    setLoading(true);
+    setError('');
+    try {
+      await login(username, password);
       navigate('/');
-    } else {
-      setError('Invalid username or password');
+    } catch (err: any) {
+      setError(err.message || 'Invalid username or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,9 +73,10 @@ const Login: React.FC = () => {
 
           <button 
             type="submit"
-            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center disabled:bg-slate-400"
           >
-            Login
+            {loading ? <Loader2 className="animate-spin" /> : 'Login'}
           </button>
           
           <div className="text-center text-xs text-slate-400 pt-4">
