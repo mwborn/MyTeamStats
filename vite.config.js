@@ -6,4 +6,11 @@ export default {
     // dove il comando xdg-open non è disponibile.
     open: false,
   },
+  optimizeDeps: {
+    exclude: [
+      'firebase/compat/app',
+      'firebase/compat/auth',
+      'firebase/compat/firestore'
+    ]
+  }
 };
