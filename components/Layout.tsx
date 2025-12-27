@@ -1,16 +1,23 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+// FIX: Switched to react-router-dom v5 imports, using withRouter HOC instead of hooks.
+import { NavLink, withRouter, RouteComponentProps } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { hasPermission } from '../services/auth';
 import { AppContext } from '../context/AppContext';
 
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// FIX: Added RouteComponentProps to get types for router props from withRouter.
+const Layout: React.FC<{ children: React.ReactNode } & RouteComponentProps> = ({ children, location, history }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, appData, logout: handleLogout, loadingData } = useContext(AppContext);
-  const navigate = useNavigate();
-  const location = useLocation();
+  // FIX: Removed navigate from context destructuring as it's now handled locally.
+  const { user, appData, logout, loadingData } = useContext(AppContext);
 
   const appSettings = appData?.settings;
+
+  // FIX: Created a local logout handler to perform navigation after logout action.
+  const handleLogout = async () => {
+    await logout();
+    history.push('/login');
+  };
 
   useEffect(() => {
     if (appSettings) {
@@ -78,10 +85,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               key={item.to}
               to={item.to}
               onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-              `}
+              // FIX: Replaced v6 className function with v5 `className` and `activeClassName` props.
+              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"
+              activeClassName="bg-orange-600 text-white"
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
@@ -125,4 +131,5 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-export default Layout;
+// FIX: Wrapped component with withRouter to inject router props.
+export default withRouter(Layout);

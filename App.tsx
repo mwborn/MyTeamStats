@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: Switched to react-router-dom v5 imports.
+import { HashRouter, Switch, Route, Redirect } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Roster from './pages/Roster';
@@ -14,48 +15,60 @@ import { hasPermission } from './services/auth';
 import { AppProvider, AppContext } from './context/AppContext';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
+// FIX: Re-implemented ProtectedRoute as a custom Route component compatible with react-router-dom v5.
+// It now uses the `render` prop to conditionally render children or a redirect.
+const ProtectedRoute = ({ children, path, ...rest }: { children: React.ReactNode, path: string, exact?: boolean }) => {
   const { user, loadingAuth } = useContext(AppContext);
 
-  if (loadingAuth) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-orange-600" size={48} />
-      </div>
-    );
-  }
+  return (
+    <Route
+      path={path}
+      {...rest}
+      render={() => {
+        if (loadingAuth) {
+          return (
+            <div className="flex justify-center items-center h-screen">
+              <Loader2 className="animate-spin text-orange-600" size={48} />
+            </div>
+          );
+        }
+        
+        if (!user) {
+          return <Redirect to="/login" />;
+        }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+        if (!hasPermission(user.role, path)) {
+          return (
+            <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
+              <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+              <p>You do not have permission to view this page.</p>
+            </div>
+          );
+        }
 
-  if (!hasPermission(user.role, path)) {
-    return (
-        <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
-            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-            <p>You do not have permission to view this page.</p>
-        </div>
-    );
-  }
-
-  return children;
+        return children;
+      }}
+    />
+  );
 };
+
 
 const AppContent: React.FC = () => {
   return (
     <Layout>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+      {/* FIX: Replaced v6 <Routes> with v5 <Switch> and updated Route syntax. */}
+      <Switch>
+        <Route path="/login" component={Login} />
         
-        <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
-        <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
-        <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
-        <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
-        <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
-        <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
-        <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
-        <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
-      </Routes>
+        <ProtectedRoute path="/" exact><Home /></ProtectedRoute>
+        <ProtectedRoute path="/roster"><Roster /></ProtectedRoute>
+        <ProtectedRoute path="/schedule"><Schedule /></ProtectedRoute>
+        <ProtectedRoute path="/import"><Import /></ProtectedRoute>
+        <ProtectedRoute path="/report"><GameReport /></ProtectedRoute>
+        <ProtectedRoute path="/team-stats"><TeamStats /></ProtectedRoute>
+        <ProtectedRoute path="/users"><UserManagement /></ProtectedRoute>
+        <ProtectedRoute path="/setup"><Setup /></ProtectedRoute>
+      </Switch>
     </Layout>
   )
 }

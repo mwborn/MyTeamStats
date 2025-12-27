@@ -1,15 +1,16 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Replaced useNavigate hook with withRouter HOC for v5 compatibility.
+import { withRouter, RouteComponentProps } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
 
-const Login: React.FC = () => {
+// FIX: Added RouteComponentProps for router props type safety.
+const Login: React.FC<RouteComponentProps> = ({ history }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AppContext);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +18,8 @@ const Login: React.FC = () => {
     setError('');
     try {
       await login(username, password);
-      navigate('/');
+      // FIX: Used history.push for navigation instead of navigate().
+      history.push('/');
     } catch (err: any) {
       setError(err.message || 'Invalid username or password');
     } finally {
@@ -91,4 +93,5 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+// FIX: Wrapped component with withRouter to inject router props.
+export default withRouter(Login);

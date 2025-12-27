@@ -2,15 +2,16 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { AppData } from '../types';
 import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// FIX: Replaced useNavigate hook with withRouter HOC for v5 compatibility.
+import { withRouter, RouteComponentProps } from 'react-router-dom';
 
-const Setup: React.FC = () => {
+// FIX: Added RouteComponentProps for router props type safety.
+const Setup: React.FC<RouteComponentProps> = ({ history }) => {
   const { appData: data, updateAppData, loadingData } = useContext(AppContext);
   const [appName, setAppName] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [logoUrl, setLogoUrl] = useState<string | undefined>('');
   const [status, setStatus] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (data) {
@@ -49,7 +50,8 @@ const Setup: React.FC = () => {
     
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
-    setTimeout(() => navigate('/'), 1500);
+    // FIX: Used history.push for navigation instead of navigate().
+    setTimeout(() => history.push('/'), 1500);
   };
   
   if (loadingData || !data) {
@@ -137,4 +139,5 @@ const Setup: React.FC = () => {
   );
 };
 
-export default Setup;
+// FIX: Wrapped component with withRouter to inject router props.
+export default withRouter(Setup);

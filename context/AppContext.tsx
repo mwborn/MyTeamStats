@@ -1,10 +1,14 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 // FIX: Switched to Firebase v9 compat imports to resolve module export errors.
-import firebase from 'firebase/compat/app';
+// By using `import type`, we prevent this module from being bundled twice,
+// which was causing the issue where the firestore service wasn't attached
+// to the correct firebase instance.
+import type firebase from 'firebase/compat/app';
 import { auth, db } from '../services/firebase';
 import { AppData, User } from '../types';
 import { getDB, saveDB } from '../services/storage';
-import { useNavigate } from 'react-router-dom';
+// FIX: Replaced useNavigate hook with useHistory for v5 compatibility.
+import { useHistory } from 'react-router-dom';
 
 interface AppContextType {
   user: User | null;
@@ -12,7 +16,7 @@ interface AppContextType {
   loadingAuth: boolean;
   loadingData: boolean;
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateAppData: (data: AppData) => Promise<void>;
 }
 
@@ -23,7 +27,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appData, setAppData] = useState<AppData | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingData, setLoadingData] = useState(true);
-  const navigate = useNavigate();
+  // FIX: Switched to useHistory hook.
+  const history = useHistory();
 
   useEffect(() => {
     // FIX: Use v8/compat auth.onAuthStateChanged method.
@@ -84,7 +89,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const logout = async () => {
     // FIX: Use v8/compat auth.signOut method.
     await auth.signOut();
-    navigate('/login');
+    // FIX: Navigation is now handled in the component calling logout to ensure router context.
+    // history.push('/login');
   };
 
   const updateAppData = async (data: AppData) => {
