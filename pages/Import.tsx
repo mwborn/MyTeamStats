@@ -14,7 +14,8 @@ const Import: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [previewStats, setPreviewStats] = useState<PlayerStats[]>([]);
-  const [extractedScores, setExtractedScores] = useState<{ main: number, opponent: number, mainQuarters: number[], opponentQuarters: number[] } | null>(null);
+  // FIX: Renamed opponentQuarters to opponentTeamQuarters for consistency with the data source type.
+  const [extractedScores, setExtractedScores] = useState<{ main: number, opponent: number, mainQuarters: number[], opponentTeamQuarters: number[] } | null>(null);
   const [statusMsg, setStatusMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   const processFile = async () => {
@@ -43,10 +44,12 @@ const Import: React.FC = () => {
     try {
       if (csvFile) {
         const text = await csvFile.text();
-        const { stats, mainTeamPoints, opponentPoints, mainTeamQuarters, opponentQuarters } = parseCSVStats(text, selectedMatchId, data.players, mainTeamId, opponentTeamId);
+        // FIX: Destructuring 'opponentTeamQuarters' instead of 'opponentQuarters' to match CSVParseResult type.
+        const { stats, mainTeamPoints, opponentPoints, mainTeamQuarters, opponentTeamQuarters } = parseCSVStats(text, selectedMatchId, data.players, mainTeamId, opponentTeamId);
         if (stats.length === 0 && mainTeamPoints === 0 && opponentPoints === 0) throw new Error('No valid stats or team scores found in CSV.');
         setPreviewStats(stats);
-        setExtractedScores({ main: mainTeamPoints, opponent: opponentPoints, mainQuarters: mainTeamQuarters, opponentQuarters: opponentQuarters });
+        // FIX: Using opponentTeamQuarters to set the state.
+        setExtractedScores({ main: mainTeamPoints, opponent: opponentPoints, mainQuarters: mainTeamQuarters, opponentTeamQuarters: opponentTeamQuarters });
       } else if (imageFile) {
         const reader = new FileReader();
         reader.readAsDataURL(imageFile);
@@ -103,10 +106,10 @@ const Import: React.FC = () => {
     if (extractedScores) {
         if (isMainHome) {
             homeScore = extractedScores.main; awayScore = extractedScores.opponent;
-            quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentQuarters };
+            quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentTeamQuarters };
         } else {
             homeScore = extractedScores.opponent; awayScore = extractedScores.main;
-            quarters = { home: extractedScores.opponentQuarters, away: extractedScores.mainQuarters };
+            quarters = { home: extractedScores.opponentTeamQuarters, away: extractedScores.mainQuarters };
         }
     } else if (previewStats.length > 0) {
         const mainStats = previewStats.filter(s => !s.playerId.startsWith('team_'));

@@ -1,6 +1,5 @@
 import { AppData } from '../types';
 import { db } from './firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DB_COLLECTION = 'data';
 const DB_DOC_ID = 'main';
@@ -51,10 +50,12 @@ const INITIAL_DATA: AppData = {
 };
 
 export const getDB = async (): Promise<AppData> => {
-  const docRef = doc(db, DB_COLLECTION, DB_DOC_ID);
-  const docSnap = await getDoc(docRef);
+  // FIX: Switched to Firebase v8/compat syntax for Firestore document access.
+  const docRef = db.collection(DB_COLLECTION).doc(DB_DOC_ID);
+  const docSnap = await docRef.get();
 
-  if (docSnap.exists()) {
+  // FIX: Use .exists property instead of .exists() method for v8/compat API.
+  if (docSnap.exists) {
     // Basic migration for new fields if needed
     const data = docSnap.data() as AppData;
     let needsUpdate = false;
@@ -73,12 +74,15 @@ export const getDB = async (): Promise<AppData> => {
   } else {
     // Doc doesn't exist, so initialize it
     console.log("No such document! Initializing database...");
-    await setDoc(docRef, INITIAL_DATA);
+    // FIX: Switched to Firebase v8/compat syntax for setting a document.
+    await docRef.set(INITIAL_DATA);
     return INITIAL_DATA;
   }
 };
 
 export const saveDB = async (data: AppData) => {
-  const docRef = doc(db, DB_COLLECTION, DB_DOC_ID);
-  await setDoc(docRef, data);
+  // FIX: Switched to Firebase v8/compat syntax for Firestore document access.
+  const docRef = db.collection(DB_COLLECTION).doc(DB_DOC_ID);
+  // FIX: Switched to Firebase v8/compat syntax for setting a document.
+  await docRef.set(data);
 };

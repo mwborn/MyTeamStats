@@ -1,10 +1,11 @@
 // Incolla qui la configurazione del tuo progetto Firebase
 // La puoi trovare nelle Impostazioni Progetto > Generale > Le tue app > Configurazione
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBbyA2fPlYK5iHjmXI1jzHWUYshcAhGNn4",
+  authDomain: "basketstats-pro-app.firebaseapp.com",
+  projectId: "basketstats-pro-app",
+  storageBucket: "basketstats-pro-app.firebasestorage.app",
+  messagingSenderId: "666331292694",
+  appId: "1:666331292694:web:360dca6cb3ec8a83770137",
+  measurementId: "G-TX0XFVE4MM"
 };

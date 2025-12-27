@@ -1,9 +1,9 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+// FIX: Switched to Firebase v9 compat imports to resolve module export errors.
+import firebase from 'firebase/compat/app';
 import { auth, db } from '../services/firebase';
 import { AppData, User } from '../types';
 import { getDB, saveDB } from '../services/storage';
-import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 
 interface AppContextType {
@@ -26,12 +26,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    // FIX: Use v8/compat auth.onAuthStateChanged method.
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: firebase.User | null) => {
       if (firebaseUser) {
         // Firebase user exists, now get our custom user data from Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
+        // FIX: Use v8/compat db.collection().doc() syntax.
+        const userDocRef = db.collection('users').doc(firebaseUser.uid);
+        // FIX: Use v8/compat .get() method on doc reference.
+        const userDocSnap = await userDocRef.get();
+        // FIX: Use .exists property instead of .exists() method for v8/compat API.
+        if (userDocSnap.exists) {
           setUser(userDocSnap.data() as User);
           // Once user is confirmed, load the app data
           setLoadingData(true);
@@ -59,7 +63,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // You MUST create users in Firebase Auth with these email formats.
     const email = `${username.toLowerCase()}@basketstats.app`;
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // FIX: Use v8/compat auth.signInWithEmailAndPassword method.
+      await auth.signInWithEmailAndPassword(email, password);
     } catch (error: any) {
         console.error("Firebase login error: ", error);
         // This is a basic migration. For a new setup, you'd create users in Firebase Auth
@@ -77,7 +82,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // FIX: Use v8/compat auth.signOut method.
+    await auth.signOut();
     navigate('/login');
   };
 
