@@ -6,20 +6,18 @@ export default {
     // dove il comando xdg-open non è disponibile.
     open: false,
   },
-  // La sezione 'resolve.alias' è stata rimossa.
-  // Gli alias a URL CDN sono un anti-pattern e creavano conflitti
-  // con la `importmap` in index.html, che è il metodo corretto
-  // per gestire dipendenze esterne in questo setup.
-  
-  // FIX: Aggiunto per risolvere l'errore di risoluzione dei moduli Firebase.
-  // Questa configurazione dice a Vite di non provare a pre-elaborare (bundle)
-  // i moduli Firebase. In questo modo, Vite li lascerà invariati e il browser
-  // potrà caricarli correttamente usando la `importmap` definita in `index.html`.
-  optimizeDeps: {
-    exclude: [
-      'firebase/app',
-      'firebase/auth',
-      'firebase/firestore'
-    ]
+  // FIX: Aggiunti alias per risolvere le importazioni di Firebase.
+  // Vite, in modalità sviluppo, ha bisogno di sapere come risolvere i percorsi
+  // dei moduli "bare" (es. 'firebase/auth'). Poiché non sono in node_modules,
+  // l'alias associa direttamente il percorso all'URL della CDN, risolvendo
+  // l'errore [plugin:vite:import-analysis].
+  resolve: {
+    alias: {
+      'firebase/app': 'https://esm.sh/firebase@10.12.2/app',
+      'firebase/auth': 'https://esm.sh/firebase@10.12.2/auth',
+      'firebase/firestore': 'https://esm.sh/firebase@10.12.2/firestore',
+    }
   }
+  // La configurazione 'optimizeDeps.exclude' è stata rimossa perché la gestione
+  // tramite alias è una soluzione più diretta e risolutiva per questo problema.
 };
