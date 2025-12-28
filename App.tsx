@@ -68,8 +68,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    // FIX: Removed the `future` prop as it was causing a TypeScript error, likely due to the version of react-router-dom in use.
-    // The previous type error was a symptom of the dependency conflict in index.html.
+    // FIX: The `future` prop was removed from `HashRouter` because it caused a TypeScript
+    // error, likely due to a dependency version mismatch. The app will function correctly
+    // without it.
     <HashRouter>
       <AppProvider>
         <AppContent />
