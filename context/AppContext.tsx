@@ -1,13 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-// FIX: Switched to Firebase v9 compat imports to resolve module export errors.
-// By using `import type`, we prevent this module from being bundled twice,
-// which was causing the issue where the firestore service wasn't attached
-// to the correct firebase instance.
-import type firebase from 'firebase/compat/app';
 import { auth, db } from '../services/firebase';
 import { AppData, User } from '../types';
 import { getDB, saveDB } from '../services/storage';
-// FIX: Removed useHistory hook as it is part of react-router-dom v5 and is not used.
 
 interface AppContextType {
   user: User | null;
@@ -26,18 +20,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appData, setAppData] = useState<AppData | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingData, setLoadingData] = useState(true);
-  // FIX: Removed unused useHistory hook.
 
   useEffect(() => {
-    // FIX: Use v8/compat auth.onAuthStateChanged method.
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: firebase.User | null) => {
+    // FIX: Let TypeScript infer the user type to prevent double-importing firebase/app
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         // Firebase user exists, now get our custom user data from Firestore
-        // FIX: Use v8/compat db.collection().doc() syntax.
         const userDocRef = db.collection('users').doc(firebaseUser.uid);
-        // FIX: Use v8/compat .get() method on doc reference.
         const userDocSnap = await userDocRef.get();
-        // FIX: Use .exists property instead of .exists() method for v8/compat API.
         if (userDocSnap.exists) {
           setUser(userDocSnap.data() as User);
           // Once user is confirmed, load the app data
