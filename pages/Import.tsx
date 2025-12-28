@@ -1,12 +1,12 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { getDB, saveDB } from '../services/storage';
 import { AppData, Match, PlayerStats, Player } from '../types';
 import { parseCSVStats } from '../services/csvParser';
 import { analyzeScoreSheet } from '../services/geminiService';
 import { Upload, FileText, Camera, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 const Import: React.FC = () => {
-  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
+  const [data, setData] = useState<AppData | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
   
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -14,9 +14,30 @@ const Import: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [previewStats, setPreviewStats] = useState<PlayerStats[]>([]);
-  // FIX: Renamed opponentQuarters to opponentTeamQuarters for consistency with the data source type.
-  const [extractedScores, setExtractedScores] = useState<{ main: number, opponent: number, mainQuarters: number[], opponentTeamQuarters: number[] } | null>(null);
+  const [extractedScores, setExtractedScores] = useState<{ main: number, opponent: number, mainQuarters: number[], opponentQuarters: number[] } | null>(null);
   const [statusMsg, setStatusMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  useEffect(() => {
+    setData(getDB());
+  }, []);
+
+  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setCsvFile(e.target.files[0]);
+      setImageFile(null);
+      setPreviewStats([]);
+      setExtractedScores(null);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setImageFile(e.target.files[0]);
+      setCsvFile(null);
+      setPreviewStats([]);
+      setExtractedScores(null);
+    }
+  };
 
   const processFile = async () => {
     if (!data || !selectedMatchId) {
@@ -44,12 +65,10 @@ const Import: React.FC = () => {
     try {
       if (csvFile) {
         const text = await csvFile.text();
-        // FIX: Destructuring 'opponentTeamQuarters' instead of 'opponentQuarters' to match CSVParseResult type.
         const { stats, mainTeamPoints, opponentPoints, mainTeamQuarters, opponentTeamQuarters } = parseCSVStats(text, selectedMatchId, data.players, mainTeamId, opponentTeamId);
         if (stats.length === 0 && mainTeamPoints === 0 && opponentPoints === 0) throw new Error('No valid stats or team scores found in CSV.');
         setPreviewStats(stats);
-        // FIX: Using opponentTeamQuarters to set the state.
-        setExtractedScores({ main: mainTeamPoints, opponent: opponentPoints, mainQuarters: mainTeamQuarters, opponentTeamQuarters: opponentTeamQuarters });
+        setExtractedScores({ main: mainTeamPoints, opponent: opponentPoints, mainQuarters: mainTeamQuarters, opponentQuarters: opponentTeamQuarters });
       } else if (imageFile) {
         const reader = new FileReader();
         reader.readAsDataURL(imageFile);
@@ -73,7 +92,7 @@ const Import: React.FC = () => {
     }
   };
 
-  const saveStats = async () => {
+  const saveStats = () => {
     if (!data || !selectedMatchId) return;
     
     const match = data.matches.find(m => m.id === selectedMatchId);
@@ -106,10 +125,10 @@ const Import: React.FC = () => {
     if (extractedScores) {
         if (isMainHome) {
             homeScore = extractedScores.main; awayScore = extractedScores.opponent;
-            quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentTeamQuarters };
+            quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentQuarters };
         } else {
             homeScore = extractedScores.opponent; awayScore = extractedScores.main;
-            quarters = { home: extractedScores.opponentTeamQuarters, away: extractedScores.mainQuarters };
+            quarters = { home: extractedScores.opponentQuarters, away: extractedScores.mainQuarters };
         }
     } else if (previewStats.length > 0) {
         const mainStats = previewStats.filter(s => !s.playerId.startsWith('team_'));
@@ -121,7 +140,8 @@ const Import: React.FC = () => {
 
     const updatedMatches = data.matches.map(m => m.id === selectedMatchId ? { ...m, isPlayed: true, homeScore, awayScore, quarters } : m);
 
-    await updateAppData({ ...data, players: updatedPlayers, stats: newStats, matches: updatedMatches });
+    saveDB({ ...data, players: updatedPlayers, stats: newStats, matches: updatedMatches });
+    setData(getDB());
     
     setStatusMsg({ type: 'success', text: 'Statistics and Scores saved successfully!' });
     setPreviewStats([]);
@@ -130,36 +150,7 @@ const Import: React.FC = () => {
     setImageFile(null);
   };
 
-  // Fix: Defined missing file upload handlers
-  const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setCsvFile(file);
-      setImageFile(null);
-      setPreviewStats([]);
-      setExtractedScores(null);
-      setStatusMsg(null);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      setCsvFile(null);
-      setPreviewStats([]);
-      setExtractedScores(null);
-      setStatusMsg(null);
-    }
-  };
-
-  if (loadingData || !data) {
-     return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="animate-spin text-orange-600" size={32} />
-      </div>
-    );
-  }
+  if (!data) return <div>Loading...</div>;
 
   const selectedMatch = data.matches.find(m => m.id === selectedMatchId);
   const homeTeam = data.teams.find(t => t.id === selectedMatch?.homeTeamId);

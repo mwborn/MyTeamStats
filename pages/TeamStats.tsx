@@ -1,27 +1,21 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { getDB } from '../services/storage';
 import { AppData, Player, Team, Match, PlayerStats } from '../types';
-import { Download, Filter, Loader2 } from 'lucide-react';
+import { Download, Filter } from 'lucide-react';
 
 const TeamStats: React.FC = () => {
-  const { appData: data, loadingData } = useContext(AppContext);
+  const [data, setData] = useState<AppData | null>(null);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   useEffect(() => {
-    if (data) {
-      const mainTeam = data.teams.find(t => t.isMain);
-      if (mainTeam) setSelectedTeamId(mainTeam.id);
-    }
-  }, [data]);
+    const db = getDB();
+    setData(db);
+    const mainTeam = db.teams.find(t => t.isMain);
+    if (mainTeam) setSelectedTeamId(mainTeam.id);
+  }, []);
 
-  if (loadingData || !data) {
-     return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="animate-spin text-orange-600" size={32} />
-      </div>
-    );
-  }
+  if (!data) return <div>Loading...</div>;
 
   const formatPercentage = (made: number, att: number) => {
     if (att === 0) return '0%';

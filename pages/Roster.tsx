@@ -1,10 +1,10 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
-import { AppData, Player, Team, League } from '../types';
-import { Plus, Trash2, Shield, User, Edit2, Save, X, Upload, AlertCircle, Image as ImageIcon, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { getDB, saveDB } from '../services/storage';
+import { AppData, Player, Team, League, PlayerStats, Match } from '../types';
+import { Plus, Trash2, Shield, User, Edit2, Save, X, Upload, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const Roster: React.FC = () => {
-  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
+  const [data, setData] = useState<AppData | null>(null);
   const [activeTab, setActiveTab] = useState<'teams' | 'players'>('players');
   
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
@@ -14,6 +14,10 @@ const Roster: React.FC = () => {
   const [newLeague, setNewLeague] = useState<Partial<League>>({ season: '25/26' });
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [teamForm, setTeamForm] = useState<Partial<Team>>({ leagueIds: [] });
+
+  useEffect(() => {
+    setData(getDB());
+  }, []);
 
   const startEditPlayer = (player?: Player) => {
     setPlayerError(null);
@@ -46,7 +50,7 @@ const Roster: React.FC = () => {
     }
   };
 
-  const handleDeletePlayer = async (idToDelete: string) => {
+  const handleDeletePlayer = (idToDelete: string) => {
     if (!data) return;
     const player = data.players.find(p => p.id === idToDelete);
     if (!player) return;
@@ -61,14 +65,14 @@ const Roster: React.FC = () => {
     const updatedPlayers = data.players.filter(p => p.id !== idToDelete);
     const updatedStats = data.stats.filter(s => s.playerId !== idToDelete);
     const newData = { ...data, players: updatedPlayers, stats: updatedStats };
-    await updateAppData(newData);
-
+    saveDB(newData);
+    setData(newData);
     if (editingPlayerId === idToDelete) {
         cancelEditPlayer();
     }
   };
 
-  const handleSavePlayer = async () => {
+  const handleSavePlayer = () => {
     if (!data) return;
     if (!playerForm.name?.trim()) { setPlayerError("Player name is required."); return; }
     if (!playerForm.teamId) { setPlayerError("Team assignment is required."); return; }
@@ -82,7 +86,8 @@ const Roster: React.FC = () => {
         const updatedPlayers = data.players.map(p => p.id === editingPlayerId ? { ...p, ...playerForm } as Player : p);
         newData = { ...data, players: updatedPlayers };
     }
-    await updateAppData(newData);
+    saveDB(newData);
+    setData(newData);
     cancelEditPlayer();
   };
 
@@ -121,7 +126,7 @@ const Roster: React.FC = () => {
     }
   };
 
-  const handleDeleteTeam = async () => {
+  const handleDeleteTeam = () => {
       if (!data || !editingTeamId || editingTeamId === 'new') return;
       const team = data.teams.find(t => t.id === editingTeamId);
       if (!team) return;
@@ -138,11 +143,12 @@ const Roster: React.FC = () => {
       const newStats = data.stats.filter(s => !playerIdsToDelete.includes(s.playerId));
       const newMatches = data.matches.filter(m => m.homeTeamId !== editingTeamId && m.awayTeamId !== editingTeamId);
       const newTeams = data.teams.filter(t => t.id !== editingTeamId);
-      await updateAppData({ ...data, teams: newTeams, players: newPlayers, matches: newMatches, stats: newStats });
+      saveDB({ ...data, teams: newTeams, players: newPlayers, matches: newMatches, stats: newStats });
+      setData(getDB());
       cancelEditTeam();
   };
 
-  const handleSaveTeam = async () => {
+  const handleSaveTeam = () => {
     if (!data || !teamForm.name) return;
     let newTeams = [...data.teams];
     if (teamForm.isMain) newTeams = newTeams.map(t => ({ ...t, isMain: false }));
@@ -152,32 +158,29 @@ const Roster: React.FC = () => {
     } else {
         newTeams = newTeams.map(t => t.id === editingTeamId ? { ...t, ...teamForm } as Team : t);
     }
-    await updateAppData({ ...data, teams: newTeams });
+    saveDB({ ...data, teams: newTeams });
+    setData(getDB());
     cancelEditTeam();
   };
 
-  const handleAddLeague = async () => {
+  const handleAddLeague = () => {
     if (!data || !newLeague.name) return;
     const league: League = { id: `l${Date.now()}`, name: newLeague.name, season: newLeague.season || '' };
-    await updateAppData({ ...data, leagues: [...data.leagues, league] });
+    saveDB({ ...data, leagues: [...data.leagues, league] });
+    setData(getDB());
     setNewLeague({ ...newLeague, name: '' });
   };
 
-  const deleteLeague = async (id: string) => {
+  const deleteLeague = (id: string) => {
     if (!data || !window.confirm("Delete league? This will also remove it from any teams and delete associated matches.")) return;
     const newMatches = data.matches.filter(m => m.leagueId !== id);
     const newLeagues = data.leagues.filter(l => l.id !== id);
     const newTeams = data.teams.map(t => ({ ...t, leagueIds: t.leagueIds.filter(lid => lid !== id) }));
-    await updateAppData({ ...data, leagues: newLeagues, matches: newMatches, teams: newTeams });
+    saveDB({ ...data, leagues: newLeagues, matches: newMatches, teams: newTeams });
+    setData(getDB());
   };
 
-  if (loadingData || !data) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="animate-spin text-orange-600" size={32} />
-      </div>
-    );
-  }
+  if (!data) return <div>Loading...</div>;
 
   const mainTeam = data.teams.find(t => t.isMain);
 

@@ -1,18 +1,22 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { getDB, saveDB } from '../services/storage';
 import { AppData, Match } from '../types';
-import { Plus, Save, X, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Save, X, Edit2, Trash2 } from 'lucide-react';
 
 const Schedule: React.FC = () => {
-  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
+  const [data, setData] = useState<AppData | null>(null);
   const [matchForm, setMatchForm] = useState<Partial<Match>>({ round: 'Andata' });
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setData(getDB());
+  }, []);
 
   const handleFormChange = (field: keyof Match, value: any) => {
     setMatchForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveMatch = async () => {
+  const handleSaveMatch = () => {
     if (!data || !matchForm.leagueId || !matchForm.homeTeamId || !matchForm.awayTeamId) return;
     
     let newMatches = [...data.matches];
@@ -27,7 +31,8 @@ const Schedule: React.FC = () => {
         newMatches.push(newMatch);
     }
 
-    await updateAppData({ ...data, matches: newMatches });
+    saveDB({ ...data, matches: newMatches });
+    setData(getDB());
     resetForm();
   };
 
@@ -36,7 +41,7 @@ const Schedule: React.FC = () => {
     setMatchForm(match);
   };
 
-  const handleDeleteMatch = async (matchId: string) => {
+  const handleDeleteMatch = (matchId: string) => {
       if (!data) return;
       const matchToDelete = data.matches.find(m => m.id === matchId);
       if (!matchToDelete) return;
@@ -52,7 +57,8 @@ const Schedule: React.FC = () => {
       const newMatches = data.matches.filter(m => m.id !== matchId);
       const newStats = data.stats.filter(s => s.matchId !== matchId);
       
-      await updateAppData({ ...data, matches: newMatches, stats: newStats });
+      saveDB({ ...data, matches: newMatches, stats: newStats });
+      setData(getDB());
   };
 
   const resetForm = () => {
@@ -60,13 +66,7 @@ const Schedule: React.FC = () => {
     setMatchForm({ round: 'Andata' });
   };
 
-  if (loadingData || !data) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="animate-spin text-orange-600" size={32} />
-      </div>
-    );
-  }
+  if (!data) return <div>Loading...</div>;
 
   return (
     <div className="space-y-6">

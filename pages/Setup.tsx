@@ -1,27 +1,24 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { getDB, saveDB } from '../services/storage';
 import { AppData } from '../types';
-import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle, Loader2 } from 'lucide-react';
-// FIX: Replaced withRouter HOC with useNavigate hook for v6 compatibility.
+import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// FIX: Removed RouteComponentProps for router props type safety.
 const Setup: React.FC = () => {
-  const { appData: data, updateAppData, loadingData } = useContext(AppContext);
-  // FIX: Use useNavigate hook for navigation.
-  const navigate = useNavigate();
+  const [data, setData] = useState<AppData | null>(null);
   const [appName, setAppName] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [logoUrl, setLogoUrl] = useState<string | undefined>('');
   const [status, setStatus] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (data) {
-      setAppName(data.settings.appName);
-      setTheme(data.settings.theme);
-      setLogoUrl(data.settings.appLogoUrl);
-    }
-  }, [data]);
+    const db = getDB();
+    setData(db);
+    setAppName(db.settings.appName);
+    setTheme(db.settings.theme);
+    setLogoUrl(db.settings.appLogoUrl);
+  }, []);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,7 +34,7 @@ const Setup: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!data) return;
     const newData: AppData = {
         ...data,
@@ -47,22 +44,15 @@ const Setup: React.FC = () => {
             appLogoUrl: logoUrl,
         }
     };
-    await updateAppData(newData);
+    saveDB(newData);
     setStatus("Settings saved successfully! Redirecting...");
     
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
-    // FIX: Used navigate() for navigation instead of history.push().
     setTimeout(() => navigate('/'), 1500);
   };
   
-  if (loadingData || !data) {
-     return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="animate-spin text-orange-600" size={32} />
-      </div>
-    );
-  }
+  if (!data) return <div>Loading...</div>;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-20">
@@ -141,5 +131,4 @@ const Setup: React.FC = () => {
   );
 };
 
-// FIX: Removed withRouter HOC as it's not available in react-router-dom v6.
 export default Setup;

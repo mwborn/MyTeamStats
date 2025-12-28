@@ -1,44 +1,46 @@
-import React, { useState, useContext, useEffect } from 'react';
-// FIX: Switched to react-router-dom v6 hooks.
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
-import { hasPermission } from '../services/auth';
-import { AppContext } from '../context/AppContext';
+import { getCurrentUser, hasPermission, logout } from '../services/auth';
+import { User, AppData } from '../types';
+import { getDB } from '../services/storage';
 
-// FIX: Removed RouteComponentProps and withRouter HOC, using hooks instead.
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // FIX: Switched to react-router-dom v6 hooks for navigation and location.
-  const { user, appData, logout, loadingData } = useContext(AppContext);
-  const location = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+  const [appSettings, setAppSettings] = useState(getDB().settings);
   const navigate = useNavigate();
-
-  const appSettings = appData?.settings;
-
-  // FIX: Created a local logout handler to perform navigation after logout action.
-  const handleLogout = async () => {
-    await logout();
-    // FIX: Use v6 navigate function.
-    navigate('/login');
-  };
+  const location = useLocation();
 
   useEffect(() => {
-    if (appSettings) {
-      const root = document.documentElement;
-      if (appSettings.theme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-      document.title = appSettings.appName;
+    const root = document.documentElement;
+    if (appSettings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
     }
+    document.title = appSettings.appName;
   }, [appSettings]);
-  
+
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (!currentUser && location.pathname !== '/login') {
+        navigate('/login');
+    }
+    setUser(currentUser);
+    setAppSettings(getDB().settings);
+  }, [location, navigate]);
+
+  const handleLogout = () => {
+      logout();
+      navigate('/login');
+  };
+
   if (location.pathname === '/login') {
       return <>{children}</>;
   }
 
-  if (!user || !appSettings) return null;
+  if (!user) return null;
 
   const allNavItems = [
     { to: '/', label: 'Home', icon: BarChart3 },
@@ -88,8 +90,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               key={item.to}
               to={item.to}
               onClick={() => setIsSidebarOpen(false)}
-              // FIX: Replaced v5 `activeClassName` prop with v6 className function.
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+              `}
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
@@ -133,5 +137,4 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// FIX: Removed withRouter HOC as it's not available in react-router-dom v6.
 export default Layout;

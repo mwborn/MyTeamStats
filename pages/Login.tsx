@@ -1,31 +1,21 @@
-import React, { useState, useContext } from 'react';
-// FIX: Replaced withRouter HOC with useNavigate hook for v6 compatibility.
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../context/AppContext';
-import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
+import { login } from '../services/auth';
+import { Lock, User as UserIcon } from 'lucide-react';
 
-// FIX: Removed RouteComponentProps for router props type safety.
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useContext(AppContext);
-  // FIX: Use useNavigate hook for navigation.
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      await login(username, password);
-      // FIX: Used navigate() for navigation instead of history.push().
+    const user = login(username, password);
+    if (user) {
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Invalid username or password');
-    } finally {
-      setLoading(false);
+    } else {
+      setError('Invalid username or password');
     }
   };
 
@@ -77,10 +67,9 @@ const Login: React.FC = () => {
 
           <button 
             type="submit"
-            disabled={loading}
-            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center disabled:bg-slate-400"
+            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg"
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Login'}
+            Login
           </button>
           
           <div className="text-center text-xs text-slate-400 pt-4">
@@ -95,5 +84,4 @@ const Login: React.FC = () => {
   );
 };
 
-// FIX: Removed withRouter HOC as it's not available in react-router-dom v6.
 export default Login;

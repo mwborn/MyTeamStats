@@ -1,6 +1,5 @@
-import React, { useContext } from 'react';
-// FIX: Switched to react-router-dom v6 imports.
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Roster from './pages/Roster';
@@ -11,68 +10,44 @@ import TeamStats from './pages/TeamStats';
 import UserManagement from './pages/UserManagement';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
-import { hasPermission } from './services/auth';
-import { AppProvider, AppContext } from './context/AppContext';
-import { Loader2 } from 'lucide-react';
+import { getCurrentUser, hasPermission } from './services/auth';
 
-// FIX: Re-implemented ProtectedRoute for react-router-dom v6.
-// It's now a component wrapper that handles auth logic and renders children or a Navigate component.
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loadingAuth } = useContext(AppContext);
-  const location = useLocation();
+const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
+  const user = getCurrentUser();
 
-  if (loadingAuth) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="animate-spin text-orange-600" size={48} />
-      </div>
-    );
-  }
-  
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (!hasPermission(user.role, location.pathname)) {
+  if (!hasPermission(user.role, path)) {
     return (
-      <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
-        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-        <p>You do not have permission to view this page.</p>
-      </div>
+        <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
+            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+            <p>You do not have permission to view this page.</p>
+        </div>
     );
   }
 
   return children;
 };
 
-
-const AppContent: React.FC = () => {
-  return (
-    <Layout>
-      {/* FIX: Replaced v5 <Switch> with v6 <Routes> and updated Route syntax to use the 'element' prop. */}
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/roster" element={<ProtectedRoute><Roster /></ProtectedRoute>} />
-        <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
-        <Route path="/import" element={<ProtectedRoute><Import /></ProtectedRoute>} />
-        <Route path="/report" element={<ProtectedRoute><GameReport /></ProtectedRoute>} />
-        <Route path="/team-stats" element={<ProtectedRoute><TeamStats /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-        <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
-      </Routes>
-    </Layout>
-  )
-}
-
 const App: React.FC = () => {
   return (
-    // FIX: Removed the unsupported 'future' prop from HashRouter to resolve a TypeScript error.
     <HashRouter>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
+      <Layout>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
+          <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
+          <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
+          <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
+          <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
+          <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
+          <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
+          <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
+        </Routes>
+      </Layout>
     </HashRouter>
   );
 };
