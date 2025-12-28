@@ -19,9 +19,9 @@ export default {
       { find: "react-router-dom", replacement: "https://esm.sh/react-router-dom@6.23.1" },
       { find: "@google/genai", replacement: "https://aistudiocdn.com/@google/genai@^1.30.0" },
       { find: "recharts", replacement: "https://aistudiocdn.com/recharts@^2.12.7" },
-      { find: "firebase/app", replacement: "https://esm.sh/firebase@10.12.2/app" },
-      { find: "firebase/auth", replacement: "https://esm.sh/firebase@10.12.2/auth" },
-      { find: "firebase/firestore", replacement: "https://esm.sh/firebase@10.12.2/firestore" }
+      { find: "firebase/app", replacement: "https://esm.sh/firebase@10.11.1/app" },
+      { find: "firebase/auth", replacement: "https://esm.sh/firebase@10.11.1/auth" },
+      { find: "firebase/firestore", replacement: "https://esm.sh/firebase@10.11.1/firestore" }
     ]
   }
 };
