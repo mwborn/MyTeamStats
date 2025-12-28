@@ -14,6 +14,7 @@ export default {
   resolve: {
     alias: {
       'react': 'https://esm.sh/react@18.3.1',
+      'react-dom': 'https://esm.sh/react-dom@18.3.1',
       'react-dom/client': 'https://esm.sh/react-dom@18.3.1/client',
       'react/jsx-dev-runtime': 'https://esm.sh/react@18.3.1/jsx-dev-runtime',
       'firebase/app': 'https://esm.sh/firebase@10.12.2/app',
