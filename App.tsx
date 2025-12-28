@@ -68,6 +68,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
+    // FIX: Removed `future` prop from HashRouter as it was causing a type error.
     <HashRouter>
       <AppProvider>
         <AppContent />
