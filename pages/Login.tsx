@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/auth';
-import { Lock, User as UserIcon } from 'lucide-react';
+import { AppContext } from '../context/AppContext';
+import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AppContext);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = login(username, password);
-    if (user) {
+    setLoading(true);
+    setError('');
+    try {
+      await login(email, password);
       navigate('/');
-    } else {
-      setError('Invalid username or password');
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,15 +44,16 @@ const Login: React.FC = () => {
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Username</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
             <div className="relative">
                <UserIcon className="absolute left-3 top-2.5 text-slate-400" size={18} />
                <input 
-                  type="text" 
+                  type="email" 
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                  placeholder="Enter username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
                />
             </div>
           </div>
@@ -61,22 +68,21 @@ const Login: React.FC = () => {
                   placeholder="Enter password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  required
                />
             </div>
           </div>
 
           <button 
             type="submit"
-            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center disabled:bg-slate-400"
           >
-            Login
+            {loading ? <Loader2 className="animate-spin" /> : 'Login'}
           </button>
           
           <div className="text-center text-xs text-slate-400 pt-4">
-             <div>Default Credentials:</div>
-             <div>admin / password</div>
-             <div>coach / password</div>
-             <div>player / password</div>
+             <p>Use your Supabase user credentials to sign in.</p>
           </div>
         </form>
       </div>

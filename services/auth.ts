@@ -1,31 +1,7 @@
-import { User, UserRole } from "../types";
-import { getDB } from "./storage";
+import { UserRole } from "../types";
 
-const SESSION_KEY = 'basketstats_session_user';
-
-export const login = (username: string, password: string): User | null => {
-    const db = getDB();
-    const user = db.users.find(u => u.username === username && u.password === password);
-    if (user) {
-        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-        return user;
-    }
-    return null;
-};
-
-export const logout = () => {
-    localStorage.removeItem(SESSION_KEY);
-};
-
-export const getCurrentUser = (): User | null => {
-    const data = localStorage.getItem(SESSION_KEY);
-    if (!data) return null;
-    try {
-        return JSON.parse(data);
-    } catch {
-        return null;
-    }
-};
+// La logica di login, logout e getCurrentUser è ora gestita
+// centralmente in AppContext.tsx usando il client di Supabase.
 
 export const hasPermission = (role: UserRole, path: string): boolean => {
     const route = path.split('/')[1] ? '/' + path.split('/')[1] : '/';

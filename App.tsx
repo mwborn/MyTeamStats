@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -10,44 +10,78 @@ import TeamStats from './pages/TeamStats';
 import UserManagement from './pages/UserManagement';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
-import { getCurrentUser, hasPermission } from './services/auth';
+import { AppProvider, AppContext } from './context/AppContext';
+import { hasPermission } from './services/auth';
+import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
-  const user = getCurrentUser();
+  const { user, loadingAuth } = useContext(AppContext);
+
+  if (loadingAuth) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
-  if (!hasPermission(user.role, path)) {
-    return (
-        <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
-            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-            <p>You do not have permission to view this page.</p>
-        </div>
-    );
-  }
+  
+  // Nota: il ruolo dell'utente non è ancora nel DB, quindi questa logica verrà ripristinata
+  // quando migreremo anche la tabella utenti. Per ora, permettiamo l'accesso.
+  // if (!hasPermission(user.role, path)) {
+  //   return (
+  //       <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
+  //           <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+  //           <p>You do not have permission to view this page.</p>
+  //       </div>
+  //   );
+  // }
 
   return children;
 };
 
+
+const AppRoutes: React.FC = () => {
+    const { user, loadingAuth } = useContext(AppContext);
+
+    if (loadingAuth) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-slate-900">
+                <Loader2 className="w-12 h-12 animate-spin text-orange-500" />
+            </div>
+        );
+    }
+
+    return (
+        <Layout>
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                
+                <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
+                <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
+                <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
+                <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
+                <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
+                <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
+                <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
+                <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
+
+                <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+            </Routes>
+        </Layout>
+    )
+}
+
+
 const App: React.FC = () => {
   return (
     <HashRouter>
-      <Layout>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
-          <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
-          <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
-          <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
-          <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
-          <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
-          <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
-          <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
-        </Routes>
-      </Layout>
+      <AppProvider>
+        <AppRoutes />
+      </AppProvider>
     </HashRouter>
   );
 };

@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
-import { getCurrentUser, hasPermission, logout } from '../services/auth';
-import { User, AppData } from '../types';
+import { AppContext } from '../context/AppContext';
+import { hasPermission } from '../services/auth';
+import { AppData } from '../types';
 import { getDB } from '../services/storage';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, logout } = useContext(AppContext);
   const [appSettings, setAppSettings] = useState(getDB().settings);
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,16 +24,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [appSettings]);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (!currentUser && location.pathname !== '/login') {
-        navigate('/login');
-    }
-    setUser(currentUser);
     setAppSettings(getDB().settings);
-  }, [location, navigate]);
+  }, [location]);
 
-  const handleLogout = () => {
-      logout();
+  const handleLogout = async () => {
+      await logout();
       navigate('/login');
   };
 
@@ -41,6 +37,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!user) return null;
+  
+  // Temporaneamente, assegniamo un ruolo fittizio per visualizzare i link.
+  // Questo verrà sostituito quando i dati utente saranno in Supabase.
+  const userRole = 'admin';
+  const userName = user.email?.split('@')[0] || 'User';
+
 
   const allNavItems = [
     { to: '/', label: 'Home', icon: BarChart3 },
@@ -53,7 +55,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/setup', label: 'Setup', icon: Settings },
   ];
 
-  const visibleItems = allNavItems.filter(item => hasPermission(user.role, item.to));
+  const visibleItems = allNavItems; //.filter(item => hasPermission(userRole, item.to));
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
@@ -104,11 +106,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="p-4 bg-slate-800 dark:bg-slate-900 shrink-0">
             <div className="flex items-center gap-3 mb-4 px-2">
                 <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center font-bold text-white shrink-0">
-                    {user.name.charAt(0).toUpperCase()}
+                    {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
-                    <div className="font-bold text-sm truncate text-white">{user.name}</div>
-                    <div className="text-xs text-slate-400 capitalize">{user.role}</div>
+                    <div className="font-bold text-sm truncate text-white">{userName}</div>
+                    <div className="text-xs text-slate-400 capitalize">{userRole}</div>
                 </div>
             </div>
             <button 

@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { getDB } from '../services/storage';
-import { AppData, Player, PlayerStats, User } from '../types';
+import { AppData, Player, PlayerStats } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getCurrentUser } from '../services/auth';
+import { AppContext } from '../context/AppContext';
 
 const Home: React.FC = () => {
   const [data, setData] = useState<AppData | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useContext(AppContext);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     const dbData = getDB();
     setData(dbData);
-    setUser(getCurrentUser());
     setIsDark(dbData.settings.theme === 'dark');
   }, []);
 
@@ -20,6 +19,9 @@ const Home: React.FC = () => {
 
   const mainTeam = data.teams.find(t => t.isMain);
   const playerStatsMap = new Map<string, { name: string, points: number, assists: number, rebounds: number }>();
+  
+  // Temporaneamente, usiamo l'email per il nome utente.
+  const userName = user.email?.split('@')[0] || 'User';
 
   // Aggregate stats
   data.stats.forEach(stat => {
@@ -41,7 +43,7 @@ const Home: React.FC = () => {
     <div className="space-y-6">
       <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-sky-400">Welcome Back, {user.name}</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-sky-400 capitalize">Welcome Back, {userName}</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
             Managing: <span className="font-semibold text-orange-600 dark:text-orange-400">{mainTeam?.name || 'My Team'}</span>
           </p>
