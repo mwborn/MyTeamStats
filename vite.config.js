@@ -17,9 +17,9 @@ export default {
   // potrà caricarli correttamente usando la `importmap` definita in `index.html`.
   optimizeDeps: {
     exclude: [
-      'firebase/compat/app',
-      'firebase/compat/auth',
-      'firebase/compat/firestore'
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore'
     ]
   }
 };

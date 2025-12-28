@@ -2,6 +2,8 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { auth, db } from '../services/firebase';
 import { AppData, User } from '../types';
 import { getDB, saveDB } from '../services/storage';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface AppContextType {
   user: User | null;
@@ -22,13 +24,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
-    // FIX: Let TypeScript infer the user type to prevent double-importing firebase/app
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+    // FIX: Switched to Firebase v9 modular syntax for auth state listener.
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Firebase user exists, now get our custom user data from Firestore
-        const userDocRef = db.collection('users').doc(firebaseUser.uid);
-        const userDocSnap = await userDocRef.get();
-        if (userDocSnap.exists) {
+        // FIX: Switched to Firebase v9 modular syntax for document reference and retrieval.
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
           setUser(userDocSnap.data() as User);
           // Once user is confirmed, load the app data
           setLoadingData(true);
@@ -56,8 +59,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // You MUST create users in Firebase Auth with these email formats.
     const email = `${username.toLowerCase()}@basketstats.app`;
     try {
-      // FIX: Use v8/compat auth.signInWithEmailAndPassword method.
-      await auth.signInWithEmailAndPassword(email, password);
+      // FIX: Use v9 modular signInWithEmailAndPassword method.
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
         console.error("Firebase login error: ", error);
         // This is a basic migration. For a new setup, you'd create users in Firebase Auth
@@ -75,8 +78,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const logout = async () => {
-    // FIX: Use v8/compat auth.signOut method.
-    await auth.signOut();
+    // FIX: Use v9 modular signOut method.
+    await signOut(auth);
     // FIX: Navigation is now handled in the component calling logout to ensure router context.
   };
 
