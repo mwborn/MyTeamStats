@@ -68,7 +68,8 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    // FIX: Removed the `future` prop which is not a valid prop for `HashRouter` and was causing a build error.
+    // FIX: Removed the 'future' prop from HashRouter as it was causing a TypeScript error,
+    // likely due to an incompatible version of react-router-dom.
     <HashRouter>
       <AppProvider>
         <AppContent />
