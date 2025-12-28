@@ -17,6 +17,7 @@ export default {
       'react-dom': 'https://esm.sh/react-dom@18.3.1',
       'react-dom/client': 'https://esm.sh/react-dom@18.3.1/client',
       'react/jsx-dev-runtime': 'https://esm.sh/react@18.3.1/jsx-dev-runtime',
+      'react-router-dom': 'https://esm.sh/react-router-dom@6.23.1',
       'firebase/app': 'https://esm.sh/firebase@10.12.2/app',
       'firebase/auth': 'https://esm.sh/firebase@10.12.2/auth',
       'firebase/firestore': 'https://esm.sh/firebase@10.12.2/firestore',
