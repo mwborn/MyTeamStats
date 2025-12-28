@@ -7,8 +7,7 @@ import type firebase from 'firebase/compat/app';
 import { auth, db } from '../services/firebase';
 import { AppData, User } from '../types';
 import { getDB, saveDB } from '../services/storage';
-// FIX: Replaced useNavigate hook with useHistory for v5 compatibility.
-import { useHistory } from 'react-router-dom';
+// FIX: Removed useHistory hook as it is part of react-router-dom v5 and is not used.
 
 interface AppContextType {
   user: User | null;
@@ -27,8 +26,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appData, setAppData] = useState<AppData | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingData, setLoadingData] = useState(true);
-  // FIX: Switched to useHistory hook.
-  const history = useHistory();
+  // FIX: Removed unused useHistory hook.
 
   useEffect(() => {
     // FIX: Use v8/compat auth.onAuthStateChanged method.
@@ -90,7 +88,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // FIX: Use v8/compat auth.signOut method.
     await auth.signOut();
     // FIX: Navigation is now handled in the component calling logout to ensure router context.
-    // history.push('/login');
   };
 
   const updateAppData = async (data: AppData) => {

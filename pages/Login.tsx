@@ -1,16 +1,18 @@
 import React, { useState, useContext } from 'react';
-// FIX: Replaced useNavigate hook with withRouter HOC for v5 compatibility.
-import { withRouter, RouteComponentProps } from 'react-router-dom';
+// FIX: Replaced withRouter HOC with useNavigate hook for v6 compatibility.
+import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
 
-// FIX: Added RouteComponentProps for router props type safety.
-const Login: React.FC<RouteComponentProps> = ({ history }) => {
+// FIX: Removed RouteComponentProps for router props type safety.
+const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AppContext);
+  // FIX: Use useNavigate hook for navigation.
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,8 +20,8 @@ const Login: React.FC<RouteComponentProps> = ({ history }) => {
     setError('');
     try {
       await login(username, password);
-      // FIX: Used history.push for navigation instead of navigate().
-      history.push('/');
+      // FIX: Used navigate() for navigation instead of history.push().
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Invalid username or password');
     } finally {
@@ -93,5 +95,5 @@ const Login: React.FC<RouteComponentProps> = ({ history }) => {
   );
 };
 
-// FIX: Wrapped component with withRouter to inject router props.
-export default withRouter(Login);
+// FIX: Removed withRouter HOC as it's not available in react-router-dom v6.
+export default Login;

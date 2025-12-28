@@ -1,22 +1,25 @@
 import React, { useState, useContext, useEffect } from 'react';
-// FIX: Switched to react-router-dom v5 imports, using withRouter HOC instead of hooks.
-import { NavLink, withRouter, RouteComponentProps } from 'react-router-dom';
+// FIX: Switched to react-router-dom v6 hooks.
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { hasPermission } from '../services/auth';
 import { AppContext } from '../context/AppContext';
 
-// FIX: Added RouteComponentProps to get types for router props from withRouter.
-const Layout: React.FC<{ children: React.ReactNode } & RouteComponentProps> = ({ children, location, history }) => {
+// FIX: Removed RouteComponentProps and withRouter HOC, using hooks instead.
+const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  // FIX: Removed navigate from context destructuring as it's now handled locally.
+  // FIX: Switched to react-router-dom v6 hooks for navigation and location.
   const { user, appData, logout, loadingData } = useContext(AppContext);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const appSettings = appData?.settings;
 
   // FIX: Created a local logout handler to perform navigation after logout action.
   const handleLogout = async () => {
     await logout();
-    history.push('/login');
+    // FIX: Use v6 navigate function.
+    navigate('/login');
   };
 
   useEffect(() => {
@@ -85,9 +88,8 @@ const Layout: React.FC<{ children: React.ReactNode } & RouteComponentProps> = ({
               key={item.to}
               to={item.to}
               onClick={() => setIsSidebarOpen(false)}
-              // FIX: Replaced v6 className function with v5 `className` and `activeClassName` props.
-              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"
-              activeClassName="bg-orange-600 text-white"
+              // FIX: Replaced v5 `activeClassName` prop with v6 className function.
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
@@ -131,5 +133,5 @@ const Layout: React.FC<{ children: React.ReactNode } & RouteComponentProps> = ({
   );
 };
 
-// FIX: Wrapped component with withRouter to inject router props.
-export default withRouter(Layout);
+// FIX: Removed withRouter HOC as it's not available in react-router-dom v6.
+export default Layout;
