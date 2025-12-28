@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    // FIX: Removed the 'future' prop as it is not compatible with the version of react-router-dom in use, which caused a type error.
+    // FIX: Removed the 'future' prop from HashRouter as it's not supported by the current type definitions, resolving the compilation error.
     <HashRouter>
       <AppProvider>
         <AppContent />
