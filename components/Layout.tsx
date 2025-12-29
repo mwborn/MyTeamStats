@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+// FIX: react-router-dom v6 components are not available, switching to v5 compatible components.
+import { NavLink, useHistory, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { hasPermission } from '../services/auth';
@@ -10,7 +11,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout } = useContext(AppContext);
   const [appSettings, setAppSettings] = useState(getDB().settings);
-  const navigate = useNavigate();
+  // FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
+  const history = useHistory();
   const location = useLocation();
 
   useEffect(() => {
@@ -29,19 +31,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleLogout = async () => {
       await logout();
-      navigate('/login');
+      // FIX: Use history.push for navigation in v5.
+      history.push('/login');
   };
 
   if (location.pathname === '/login') {
       return <>{children}</>;
   }
-
-  if (!user) return null;
   
   // Temporaneamente, assegniamo un ruolo fittizio per visualizzare i link.
   // Questo verrà sostituito quando i dati utente saranno in Supabase.
-  const userRole = 'admin';
-  const userName = user.email?.split('@')[0] || 'User';
+  const userRole = user ? 'admin' : ''; // Default to empty if no user
+  const userName = user?.email?.split('@')[0] || 'User';
 
 
   const allNavItems = [
@@ -91,11 +92,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavLink
               key={item.to}
               to={item.to}
+              exact={item.to === '/'}
               onClick={() => setIsSidebarOpen(false)}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-              `}
+              // FIX: `className` with a function is a v6 feature. Use `activeClassName` for v5.
+              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"
+              activeClassName="bg-orange-600 text-white"
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>

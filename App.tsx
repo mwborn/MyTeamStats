@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// FIX: react-router-dom v6 components are not available, switching to v5 compatible components.
+import { HashRouter, Switch, Route, Redirect } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Roster from './pages/Roster';
@@ -14,6 +15,7 @@ import { AppProvider, AppContext } from './context/AppContext';
 import { hasPermission } from './services/auth';
 import { Loader2 } from 'lucide-react';
 
+// FIX: Update ProtectedRoute for react-router-dom v5.
 const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
   const { user, loadingAuth } = useContext(AppContext);
 
@@ -26,7 +28,8 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // FIX: Use Redirect component for v5.
+    return <Redirect to="/login" />;
   }
   
   // Nota: il ruolo dell'utente non è ancora nel DB, quindi questa logica verrà ripristinata
@@ -57,20 +60,21 @@ const AppRoutes: React.FC = () => {
 
     return (
         <Layout>
-            <Routes>
-                <Route path="/login" element={<Login />} />
+            {/* FIX: Use Switch and render prop for v5, instead of Routes and element prop from v6 */}
+            <Switch>
+                <Route path="/login" component={Login} />
                 
-                <Route path="/" element={<ProtectedRoute path="/" children={<Home />} />} />
-                <Route path="/roster" element={<ProtectedRoute path="/roster" children={<Roster />} />} />
-                <Route path="/schedule" element={<ProtectedRoute path="/schedule" children={<Schedule />} />} />
-                <Route path="/import" element={<ProtectedRoute path="/import" children={<Import />} />} />
-                <Route path="/report" element={<ProtectedRoute path="/report" children={<GameReport />} />} />
-                <Route path="/team-stats" element={<ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
-                <Route path="/users" element={<ProtectedRoute path="/users" children={<UserManagement />} />} />
-                <Route path="/setup" element={<ProtectedRoute path="/setup" children={<Setup />} />} />
+                <Route path="/" exact render={() => <ProtectedRoute path="/" children={<Home />} />} />
+                <Route path="/roster" render={() => <ProtectedRoute path="/roster" children={<Roster />} />} />
+                <Route path="/schedule" render={() => <ProtectedRoute path="/schedule" children={<Schedule />} />} />
+                <Route path="/import" render={() => <ProtectedRoute path="/import" children={<Import />} />} />
+                <Route path="/report" render={() => <ProtectedRoute path="/report" children={<GameReport />} />} />
+                <Route path="/team-stats" render={() => <ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
+                <Route path="/users" render={() => <ProtectedRoute path="/users" children={<UserManagement />} />} />
+                <Route path="/setup" render={() => <ProtectedRoute path="/setup" children={<Setup />} />} />
 
-                <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
-            </Routes>
+                <Route path="*" render={() => user ? <Redirect to="/" /> : <Redirect to="/login" />} />
+            </Switch>
         </Layout>
     )
 }

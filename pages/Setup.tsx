@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { getDB, saveDB } from '../services/storage';
 import { AppData } from '../types';
 import { Save, Upload, Sun, Moon, Image as ImageIcon, CheckCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
+import { useHistory } from 'react-router-dom';
 
 const Setup: React.FC = () => {
   const [data, setData] = useState<AppData | null>(null);
@@ -10,7 +11,8 @@ const Setup: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [logoUrl, setLogoUrl] = useState<string | undefined>('');
   const [status, setStatus] = useState('');
-  const navigate = useNavigate();
+  // FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
+  const history = useHistory();
 
   useEffect(() => {
     const db = getDB();
@@ -49,7 +51,8 @@ const Setup: React.FC = () => {
     
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
-    setTimeout(() => navigate('/'), 1500);
+    // FIX: Use history.push for navigation in v5.
+    setTimeout(() => history.push('/'), 1500);
   };
   
   if (!data) return <div>Loading...</div>;
