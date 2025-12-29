@@ -2,16 +2,14 @@ import React, { useEffect, useState, useContext } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
-import { hasPermission } from '../services/auth';
-import { AppData } from '../types';
-import { getDB } from '../services/storage';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, logout } = useContext(AppContext);
-  const [appSettings, setAppSettings] = useState(getDB().settings);
+  const { user, logout, appData } = useContext(AppContext);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const appSettings = appData.settings;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -23,10 +21,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     document.title = appSettings.appName;
   }, [appSettings]);
 
-  useEffect(() => {
-    setAppSettings(getDB().settings);
-  }, [location]);
-
   const handleLogout = async () => {
       await logout();
       navigate('/login');
@@ -36,11 +30,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return <>{children}</>;
   }
   
-  // Temporaneamente, assegniamo un ruolo fittizio per visualizzare i link.
-  // Questo verrà sostituito quando i dati utente saranno in Supabase.
-  const userRole = user ? 'admin' : ''; // Default to empty if no user
+  const userRole = user ? 'admin' : ''; // Placeholder for now
   const userName = user?.email?.split('@')[0] || 'User';
-
 
   const allNavItems = [
     { to: '/', label: 'Home', icon: BarChart3 },
@@ -53,7 +44,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { to: '/setup', label: 'Setup', icon: Settings },
   ];
 
-  const visibleItems = allNavItems; //.filter(item => hasPermission(userRole, item.to));
+  const visibleItems = allNavItems;
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">

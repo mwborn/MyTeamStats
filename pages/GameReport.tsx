@@ -1,48 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { getDB } from '../services/storage';
-import { AppData, Match, PlayerStats, Team } from '../types';
-import { Download, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+import { Match, PlayerStats, Team } from '../types';
+import { Download, Loader2 } from 'lucide-react';
 
 const GameReport: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData, loadingData } = useContext(AppContext);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
   const [viewTeamId, setViewTeamId] = useState<string>('');
 
   useEffect(() => {
-    setData(getDB());
-  }, []);
-
-  useEffect(() => {
-      if (selectedMatchId && data) {
-          const match = data.matches.find(m => m.id === selectedMatchId);
+      if (selectedMatchId && appData) {
+          const match = appData.matches.find(m => m.id === selectedMatchId);
           if (match) {
-              const home = data.teams.find(t => t.id === match.homeTeamId);
-              const away = data.teams.find(t => t.id === match.awayTeamId);
+              const home = appData.teams.find(t => t.id === match.homeTeamId);
+              const away = appData.teams.find(t => t.id === match.awayTeamId);
               if (home?.isMain) setViewTeamId(home.id);
               else if (away?.isMain) setViewTeamId(away.id);
               else setViewTeamId(home?.id || '');
           }
       }
-  }, [selectedMatchId, data]);
+  }, [selectedMatchId, appData]);
 
-  if (!data) return <div>Loading...</div>;
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-orange-500" size={32} />
+      </div>
+    );
+  }
 
-  const matches = data.matches.filter(m => !selectedLeagueId || m.leagueId === selectedLeagueId);
-  const currentMatch = data.matches.find(m => m.id === selectedMatchId);
-  const stats = currentMatch ? data.stats.filter(s => s.matchId === currentMatch.id) : [];
+  const matches = appData.matches.filter(m => !selectedLeagueId || m.leagueId === selectedLeagueId);
+  const currentMatch = appData.matches.find(m => m.id === selectedMatchId);
+  const stats = currentMatch ? appData.stats.filter(s => s.matchId === currentMatch.id) : [];
   
-  const league = data.leagues.find(l => l.id === currentMatch?.leagueId);
-  const homeTeam = data.teams.find(t => t.id === currentMatch?.homeTeamId);
-  const awayTeam = data.teams.find(t => t.id === currentMatch?.awayTeamId);
-  const viewingTeam = data.teams.find(t => t.id === viewTeamId);
+  const league = appData.leagues.find(l => l.id === currentMatch?.leagueId);
+  const homeTeam = appData.teams.find(t => t.id === currentMatch?.homeTeamId);
+  const awayTeam = appData.teams.find(t => t.id === currentMatch?.awayTeamId);
+  const viewingTeam = appData.teams.find(t => t.id === viewTeamId);
 
   const teamStats = stats.filter(s => {
-      const p = data.players.find(pl => pl.id === s.playerId);
+      const p = appData.players.find(pl => pl.id === s.playerId);
       return p?.teamId === viewTeamId;
   }).sort((a,b) => {
-      const pA = data.players.find(p => p.id === a.playerId);
-      const pB = data.players.find(p => p.id === b.playerId);
+      const pA = appData.players.find(p => p.id === a.playerId);
+      const pB = appData.players.find(p => p.id === b.playerId);
       return (pA?.number || 0) - (pB?.number || 0);
   });
 
@@ -65,11 +67,11 @@ const GameReport: React.FC = () => {
        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap gap-4 items-end no-print">
           <div>
              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">League</label>
-             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedLeagueId} onChange={e => { setSelectedLeagueId(e.target.value); setSelectedMatchId(''); }}><option value="">All Leagues</option>{data.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedLeagueId} onChange={e => { setSelectedLeagueId(e.target.value); setSelectedMatchId(''); }}><option value="">All Leagues</option>{appData.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
           </div>
           <div>
              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Game</label>
-             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedMatchId} onChange={e => setSelectedMatchId(e.target.value)}><option value="">Select Game</option>{matches.map(m => { const h = data.teams.find(t=>t.id===m.homeTeamId)?.name; const a = data.teams.find(t=>t.id===m.awayTeamId)?.name; return <option key={m.id} value={m.id}>#{m.matchNumber}: {h} vs {a}</option>})}</select>
+             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedMatchId} onChange={e => setSelectedMatchId(e.target.value)}><option value="">Select Game</option>{matches.map(m => { const h = appData.teams.find(t=>t.id===m.homeTeamId)?.name; const a = appData.teams.find(t=>t.id===m.awayTeamId)?.name; return <option key={m.id} value={m.id}>#{m.matchNumber}: {h} vs {a}</option>})}</select>
           </div>
           {currentMatch && (<div className="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex items-center"><button className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewTeamId === homeTeam?.id ? 'bg-white dark:bg-slate-600 shadow text-black dark:text-white' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800'}`} onClick={() => setViewTeamId(homeTeam?.id || '')}> {homeTeam?.name} (Home) </button><button className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewTeamId === awayTeam?.id ? 'bg-white dark:bg-slate-600 shadow text-black dark:text-white' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800'}`} onClick={() => setViewTeamId(awayTeam?.id || '')}> {awayTeam?.name} (Away) </button></div>)}
           <div className="flex-1 text-right"><button onClick={() => window.print()} className="bg-slate-900 dark:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ml-auto"><Download size={16} /> Print / PDF</button></div>
@@ -103,7 +105,7 @@ const GameReport: React.FC = () => {
 
             <div className="overflow-x-auto">
                <div className="bg-[#66b64d] text-white px-4 py-1 font-bold text-sm uppercase flex justify-between"><span>Stats for: {viewingTeam?.name}</span><span>{viewingTeam?.isMain ? 'Main Team' : 'Opponent'}</span></div>
-               <table className="w-full text-xs border-collapse"><thead ><tr className="bg-[#66b64d] text-white uppercase tracking-tighter"><th className="p-2 text-left sticky left-0 bg-[#66b64d]">Player</th><th className="p-1">Mins</th><th className="p-1" colSpan={3}>2 Points</th><th className="p-1" colSpan={3}>3 Points</th><th className="p-1" colSpan={3}>Free Throws</th><th className="p-1" colSpan={3}>Rebounds</th><th className="p-1" colSpan={2}>Fouls</th><th className="p-1">TO</th><th className="p-1">ST</th><th className="p-1">AS</th><th className="p-1">BK</th><th className="p-1">BA</th><th className="p-1 font-bold">PTS</th><th className="p-1">VPS</th><th className="p-1">+/-</th></tr><tr className="bg-[#5ea846] text-white text-[10px]"><th className="p-1 sticky left-0 bg-[#5ea846]"></th><th className="p-1"></th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">D</th><th className="p-1">O</th><th className="p-1">T</th><th className="p-1">C</th><th className="p-1">D</th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th></tr></thead><tbody className="divide-y divide-slate-200">{teamStats.map((s, idx) => { const p = data.players.find(pl => pl.id === s.playerId); const rowClass = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'; return (<tr key={s.playerId} className={`${rowClass} hover:bg-yellow-50 text-center text-slate-800`}><td className={`p-1 text-left font-bold sticky left-0 ${rowClass}`}><span className="inline-block w-4 mr-1">{p?.number}</span> {p?.name}</td><td className="p-1 font-mono">{s.minutes}</td><td className="p-1">{s.twoPtMade}</td><td className="p-1">{s.twoPtAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.twoPtMade, s.twoPtAtt)}</td><td className="p-1">{s.threePtMade}</td><td className="p-1">{s.threePtAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.threePtMade, s.threePtAtt)}</td><td className="p-1">{s.ftMade}</td><td className="p-1">{s.ftAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.ftMade, s.ftAtt)}</td><td className="p-1">{s.rebDef}</td><td className="p-1">{s.rebOff}</td><td className="p-1 font-bold">{s.rebDef + s.rebOff}</td><td className="p-1">{s.foulsCommitted}</td><td className="p-1">{s.foulsDrawn}</td><td className="p-1">{s.turnovers}</td><td className="p-1">{s.steals}</td><td className="p-1">{s.assists}</td><td className="p-1">{s.blocksMade}</td><td className="p-1">{s.blocksRec}</td><td className="p-1 font-bold bg-yellow-100">{s.points}</td><td className={`p-1 font-bold ${s.valuation > 0 ? 'text-green-600' : 'text-red-600'}`}>{s.valuation}</td><td className={`p-1 font-bold text-white ${getPlusMinusColor(s.plusMinus)}`}>{s.plusMinus}</td></tr>);})}<tr className="bg-[#66b64d] text-white font-bold text-center border-t-2 border-slate-400"><td className="p-2 text-left sticky left-0 bg-[#66b64d]">Grand Total</td><td className="p-1">{totals.minutes}</td><td className="p-1">{totals.twoPtMade}</td><td className="p-1">{totals.twoPtAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.twoPtMade, totals.twoPtAtt)}</td><td className="p-1">{totals.threePtMade}</td><td className="p-1">{totals.threePtAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.threePtMade, totals.threePtAtt)}</td><td className="p-1">{totals.ftMade}</td><td className="p-1">{totals.ftAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.ftMade, totals.ftAtt)}</td><td className="p-1">{totals.rebDef}</td><td className="p-1">{totals.rebOff}</td><td className="p-1 text-white">{totals.rebDef + totals.rebOff}</td><td className="p-1">{totals.foulsCommitted}</td><td className="p-1">{totals.foulsDrawn}</td><td className="p-1">{totals.turnovers}</td><td className="p-1">{totals.steals}</td><td className="p-1">{totals.assists}</td><td className="p-1">{totals.blocksMade}</td><td className="p-1">{totals.blocksRec}</td><td className="p-1 text-lg">{totals.points}</td><td className="p-1">-</td><td className="p-1">-</td></tr></tbody></table></div>
+               <table className="w-full text-xs border-collapse"><thead ><tr className="bg-[#66b64d] text-white uppercase tracking-tighter"><th className="p-2 text-left sticky left-0 bg-[#66b64d]">Player</th><th className="p-1">Mins</th><th className="p-1" colSpan={3}>2 Points</th><th className="p-1" colSpan={3}>3 Points</th><th className="p-1" colSpan={3}>Free Throws</th><th className="p-1" colSpan={3}>Rebounds</th><th className="p-1" colSpan={2}>Fouls</th><th className="p-1">TO</th><th className="p-1">ST</th><th className="p-1">AS</th><th className="p-1">BK</th><th className="p-1">BA</th><th className="p-1 font-bold">PTS</th><th className="p-1">VPS</th><th className="p-1">+/-</th></tr><tr className="bg-[#5ea846] text-white text-[10px]"><th className="p-1 sticky left-0 bg-[#5ea846]"></th><th className="p-1"></th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">M</th><th className="p-1">A</th><th className="p-1">%</th><th className="p-1">D</th><th className="p-1">O</th><th className="p-1">T</th><th className="p-1">C</th><th className="p-1">D</th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th><th className="p-1"></th></tr></thead><tbody className="divide-y divide-slate-200">{teamStats.map((s, idx) => { const p = appData.players.find(pl => pl.id === s.playerId); const rowClass = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'; return (<tr key={s.playerId} className={`${rowClass} hover:bg-yellow-50 text-center text-slate-800`}><td className={`p-1 text-left font-bold sticky left-0 ${rowClass}`}><span className="inline-block w-4 mr-1">{p?.number}</span> {p?.name}</td><td className="p-1 font-mono">{s.minutes}</td><td className="p-1">{s.twoPtMade}</td><td className="p-1">{s.twoPtAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.twoPtMade, s.twoPtAtt)}</td><td className="p-1">{s.threePtMade}</td><td className="p-1">{s.threePtAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.threePtMade, s.threePtAtt)}</td><td className="p-1">{s.ftMade}</td><td className="p-1">{s.ftAtt}</td><td className="p-1 font-mono text-slate-700">{getPct(s.ftMade, s.ftAtt)}</td><td className="p-1">{s.rebDef}</td><td className="p-1">{s.rebOff}</td><td className="p-1 font-bold">{s.rebDef + s.rebOff}</td><td className="p-1">{s.foulsCommitted}</td><td className="p-1">{s.foulsDrawn}</td><td className="p-1">{s.turnovers}</td><td className="p-1">{s.steals}</td><td className="p-1">{s.assists}</td><td className="p-1">{s.blocksMade}</td><td className="p-1">{s.blocksRec}</td><td className="p-1 font-bold bg-yellow-100">{s.points}</td><td className={`p-1 font-bold ${s.valuation > 0 ? 'text-green-600' : 'text-red-600'}`}>{s.valuation}</td><td className={`p-1 font-bold text-white ${getPlusMinusColor(s.plusMinus)}`}>{s.plusMinus}</td></tr>);})}<tr className="bg-[#66b64d] text-white font-bold text-center border-t-2 border-slate-400"><td className="p-2 text-left sticky left-0 bg-[#66b64d]">Grand Total</td><td className="p-1">{totals.minutes}</td><td className="p-1">{totals.twoPtMade}</td><td className="p-1">{totals.twoPtAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.twoPtMade, totals.twoPtAtt)}</td><td className="p-1">{totals.threePtMade}</td><td className="p-1">{totals.threePtAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.threePtMade, totals.threePtAtt)}</td><td className="p-1">{totals.ftMade}</td><td className="p-1">{totals.ftAtt}</td><td className="p-1 text-xs opacity-90">{getPct(totals.ftMade, totals.ftAtt)}</td><td className="p-1">{totals.rebDef}</td><td className="p-1">{totals.rebOff}</td><td className="p-1 text-white">{totals.rebDef + totals.rebOff}</td><td className="p-1">{totals.foulsCommitted}</td><td className="p-1">{totals.foulsDrawn}</td><td className="p-1">{totals.turnovers}</td><td className="p-1">{totals.steals}</td><td className="p-1">{totals.assists}</td><td className="p-1">{totals.blocksMade}</td><td className="p-1">{totals.blocksRec}</td><td className="p-1 text-lg">{totals.points}</td><td className="p-1">-</td><td className="p-1">-</td></tr></tbody></table></div>
             <div className="p-4 bg-white text-xs text-slate-500 flex justify-between border-t"><span>Generated by BasketStats Pro</span><span>{new Date().toLocaleDateString()}</span></div>
          </div>
        ) : (

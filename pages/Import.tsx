@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { getDB, saveDB } from '../services/storage';
-import { AppData, Match, PlayerStats, Player } from '../types';
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+// FIX: Import the 'Match' type.
+import { PlayerStats, Player, Match } from '../types';
 import { parseCSVStats } from '../services/csvParser';
 import { analyzeScoreSheet } from '../services/geminiService';
 import { Upload, FileText, Camera, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 const Import: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData, loadingData, saveStatsForMatch } = useContext(AppContext);
   const [selectedMatchId, setSelectedMatchId] = useState<string>('');
   
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -16,10 +17,6 @@ const Import: React.FC = () => {
   const [previewStats, setPreviewStats] = useState<PlayerStats[]>([]);
   const [extractedScores, setExtractedScores] = useState<{ main: number, opponent: number, mainQuarters: number[], opponentQuarters: number[] } | null>(null);
   const [statusMsg, setStatusMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
-
-  useEffect(() => {
-    setData(getDB());
-  }, []);
 
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -40,15 +37,15 @@ const Import: React.FC = () => {
   };
 
   const processFile = async () => {
-    if (!data || !selectedMatchId) {
+    if (!appData || !selectedMatchId) {
       setStatusMsg({ type: 'error', text: 'Select a match first.' });
       return;
     }
     
-    const match = data.matches.find(m => m.id === selectedMatchId);
+    const match = appData.matches.find(m => m.id === selectedMatchId);
     if (!match) return;
 
-    let mainTeamId = data.teams.find(t => t.isMain)?.id;
+    let mainTeamId = appData.teams.find(t => t.isMain)?.id;
     let opponentTeamId;
     if (match.homeTeamId === mainTeamId) opponentTeamId = match.awayTeamId;
     else if (match.awayTeamId === mainTeamId) opponentTeamId = match.homeTeamId;
@@ -65,7 +62,7 @@ const Import: React.FC = () => {
     try {
       if (csvFile) {
         const text = await csvFile.text();
-        const { stats, mainTeamPoints, opponentPoints, mainTeamQuarters, opponentTeamQuarters } = parseCSVStats(text, selectedMatchId, data.players, mainTeamId, opponentTeamId);
+        const { stats, mainTeamPoints, opponentPoints, mainTeamQuarters, opponentTeamQuarters } = parseCSVStats(text, selectedMatchId, appData.players, mainTeamId, opponentTeamId);
         if (stats.length === 0 && mainTeamPoints === 0 && opponentPoints === 0) throw new Error('No valid stats or team scores found in CSV.');
         setPreviewStats(stats);
         setExtractedScores({ main: mainTeamPoints, opponent: opponentPoints, mainQuarters: mainTeamQuarters, opponentQuarters: opponentTeamQuarters });
@@ -75,7 +72,7 @@ const Import: React.FC = () => {
         reader.onloadend = async () => {
           try {
              const base64 = (reader.result as string).split(',')[1];
-             const stats = await analyzeScoreSheet(base64, data.players, selectedMatchId);
+             const stats = await analyzeScoreSheet(base64, appData.players, selectedMatchId);
              setPreviewStats(stats);
              setExtractedScores(null);
           } catch (e) {
@@ -92,69 +89,69 @@ const Import: React.FC = () => {
     }
   };
 
-  const saveStats = () => {
-    if (!data || !selectedMatchId) return;
+  const handleSaveStats = async () => {
+    if (!appData || !selectedMatchId) return;
     
-    const match = data.matches.find(m => m.id === selectedMatchId);
+    const match = appData.matches.find(m => m.id === selectedMatchId);
     if (!match) return;
 
-    let updatedPlayers = [...data.players];
-
+    let playersToCreate: Partial<Player>[] = [];
     const benchStat = previewStats.find(s => s.playerId.startsWith('bench_'));
-    if (benchStat && !updatedPlayers.find(p => p.id === benchStat.playerId)) {
+    if (benchStat && !appData.players.find(p => p.id === benchStat.playerId)) {
         const teamId = benchStat.playerId.replace('bench_', '');
-        updatedPlayers.push({ id: benchStat.playerId, teamId: teamId, name: 'Bench Tech.', number: 997, role: 'Bench' });
+        playersToCreate.push({ id: benchStat.playerId, teamId: teamId, name: 'Bench Tech.', number: 997, role: 'Bench' });
     }
 
     const oppStat = previewStats.find(s => s.playerId.startsWith('team_'));
-    if (oppStat && !updatedPlayers.find(p => p.id === oppStat.playerId)) {
+    if (oppStat && !appData.players.find(p => p.id === oppStat.playerId)) {
         const teamId = oppStat.playerId.replace('team_', '');
-        const teamName = data.teams.find(t => t.id === teamId)?.name || 'Opponent';
-        updatedPlayers.push({ id: oppStat.playerId, teamId: teamId, name: `${teamName} (Total)`, number: 999, role: 'Team' });
+        const teamName = appData.teams.find(t => t.id === teamId)?.name || 'Opponent';
+        playersToCreate.push({ id: oppStat.playerId, teamId: teamId, name: `${teamName} (Total)`, number: 999, role: 'Team' });
     }
 
-    const newStats = [...data.stats.filter(s => s.matchId !== selectedMatchId), ...previewStats];
-    
-    const homeTeam = data.teams.find(t => t.id === match.homeTeamId);
+    const homeTeam = appData.teams.find(t => t.id === match.homeTeamId);
     const isMainHome = homeTeam?.isMain; 
 
-    let homeScore = match.homeScore || 0;
-    let awayScore = match.awayScore || 0;
-    let quarters: { home: number[], away: number[] } | undefined = undefined;
-
+    let scores: Partial<Match> = { isPlayed: true };
     if (extractedScores) {
         if (isMainHome) {
-            homeScore = extractedScores.main; awayScore = extractedScores.opponent;
-            quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentQuarters };
+            scores.homeScore = extractedScores.main; scores.awayScore = extractedScores.opponent;
+            scores.quarters = { home: extractedScores.mainQuarters, away: extractedScores.opponentQuarters };
         } else {
-            homeScore = extractedScores.opponent; awayScore = extractedScores.main;
-            quarters = { home: extractedScores.opponentQuarters, away: extractedScores.mainQuarters };
+            scores.homeScore = extractedScores.opponent; scores.awayScore = extractedScores.main;
+            scores.quarters = { home: extractedScores.opponentQuarters, away: extractedScores.mainQuarters };
         }
     } else if (previewStats.length > 0) {
         const mainStats = previewStats.filter(s => !s.playerId.startsWith('team_'));
         const teamPoints = mainStats.reduce((sum, s) => sum + s.points, 0);
-        if (isMainHome) homeScore = teamPoints; else awayScore = teamPoints;
+        if (isMainHome) scores.homeScore = teamPoints; else scores.awayScore = teamPoints;
         const oppStatPoints = previewStats.find(s => s.playerId.startsWith('team_'))?.points;
-        if (oppStatPoints) { if (isMainHome) awayScore = oppStatPoints; else homeScore = oppStatPoints; }
+        if (oppStatPoints) { if (isMainHome) scores.awayScore = oppStatPoints; else scores.homeScore = oppStatPoints; }
     }
-
-    const updatedMatches = data.matches.map(m => m.id === selectedMatchId ? { ...m, isPlayed: true, homeScore, awayScore, quarters } : m);
-
-    saveDB({ ...data, players: updatedPlayers, stats: newStats, matches: updatedMatches });
-    setData(getDB());
     
-    setStatusMsg({ type: 'success', text: 'Statistics and Scores saved successfully!' });
-    setPreviewStats([]);
-    setExtractedScores(null);
-    setCsvFile(null);
-    setImageFile(null);
+    try {
+        await saveStatsForMatch(selectedMatchId, previewStats, scores, playersToCreate);
+        setStatusMsg({ type: 'success', text: 'Statistics and Scores saved successfully!' });
+        setPreviewStats([]);
+        setExtractedScores(null);
+        setCsvFile(null);
+        setImageFile(null);
+    } catch(e: any) {
+        setStatusMsg({ type: 'error', text: 'Failed to save stats: ' + e.message });
+    }
   };
 
-  if (!data) return <div>Loading...</div>;
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-orange-500" size={32} />
+      </div>
+    );
+  }
 
-  const selectedMatch = data.matches.find(m => m.id === selectedMatchId);
-  const homeTeam = data.teams.find(t => t.id === selectedMatch?.homeTeamId);
-  const awayTeam = data.teams.find(t => t.id === selectedMatch?.awayTeamId);
+  const selectedMatch = appData.matches.find(m => m.id === selectedMatchId);
+  const homeTeam = appData.teams.find(t => t.id === selectedMatch?.homeTeamId);
+  const awayTeam = appData.teams.find(t => t.id === selectedMatch?.awayTeamId);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
@@ -169,9 +166,9 @@ const Import: React.FC = () => {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Match</label>
               <select className="w-full px-3 py-2 border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700" value={selectedMatchId} onChange={e => setSelectedMatchId(e.target.value)}>
                 <option value="">-- Choose Match --</option>
-                {data.matches.map(m => {
-                   const h = data.teams.find(t => t.id === m.homeTeamId)?.name;
-                   const a = data.teams.find(t => t.id === m.awayTeamId)?.name;
+                {appData.matches.map(m => {
+                   const h = appData.teams.find(t => t.id === m.homeTeamId)?.name;
+                   const a = appData.teams.find(t => t.id === m.awayTeamId)?.name;
                    const label = m.isPlayed ? `✔ #${m.matchNumber} - ${h} vs ${a} (${m.homeScore}-${m.awayScore})` : `#${m.matchNumber} - ${h} vs ${a}`;
                    return <option key={m.id} value={m.id}>{label}</option>;
                 })}
@@ -232,7 +229,7 @@ const Import: React.FC = () => {
                     </div>
                 )}
             </div>
-            <button onClick={saveStats} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors">
+            <button onClick={handleSaveStats} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors">
               Confirm & Save
             </button>
           </div>
@@ -254,7 +251,7 @@ const Import: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {previewStats.map((stat, idx) => {
-                        let p = data.players.find(pl => pl.id === stat.playerId);
+                        let p = appData.players.find(pl => pl.id === stat.playerId);
                         let displayName = p?.name || stat.playerId;
                         if (stat.playerId.startsWith('bench_')) displayName = "Bench Tech.";
                         if (stat.playerId.startsWith('team_')) displayName = "Opponent Team Totals";

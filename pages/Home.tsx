@@ -1,31 +1,32 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { getDB } from '../services/storage';
-import { AppData, Player, PlayerStats } from '../types';
+import React, { useState, useContext, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AppContext } from '../context/AppContext';
+import { Loader2 } from 'lucide-react';
 
 const Home: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
-  const { user } = useContext(AppContext);
+  const { user, appData, loadingData } = useContext(AppContext);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const dbData = getDB();
-    setData(dbData);
-    setIsDark(dbData.settings.theme === 'dark');
-  }, []);
+    setIsDark(appData.settings.theme === 'dark');
+  }, [appData.settings.theme]);
 
-  if (!data || !user) return <div>Loading...</div>;
+  if (loadingData || !user) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-orange-500" size={32} />
+      </div>
+    );
+  }
 
-  const mainTeam = data.teams.find(t => t.isMain);
+  const mainTeam = appData.teams.find(t => t.isMain);
   const playerStatsMap = new Map<string, { name: string, points: number, assists: number, rebounds: number }>();
   
-  // Temporaneamente, usiamo l'email per il nome utente.
   const userName = user.email?.split('@')[0] || 'User';
 
   // Aggregate stats
-  data.stats.forEach(stat => {
-    const player = data.players.find(p => p.id === stat.playerId);
+  appData.stats.forEach(stat => {
+    const player = appData.players.find(p => p.id === stat.playerId);
     if (!player || player.teamId !== mainTeam?.id) return;
 
     const current = playerStatsMap.get(player.id) || { name: player.name, points: 0, assists: 0, rebounds: 0 };
@@ -57,25 +58,29 @@ const Home: React.FC = () => {
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
           <h2 className="text-lg font-bold mb-4 text-slate-800 dark:text-slate-100">Top 10 Performers (Season Total)</h2>
           <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(128, 128, 128, 0.2)" : "rgba(200, 200, 200, 0.5)"}/>
-                <XAxis dataKey="name" tick={{fontSize: 12, fill: isDark ? 'rgb(156 163 175)' : 'rgb(100 116 139)'}} interval={0} angle={-15} textAnchor="end" height={60} />
-                <YAxis tick={{fontSize: 12, fill: isDark ? 'rgb(156 163 175)' : 'rgb(100 116 139)'}}/>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)', 
-                    borderColor: isDark ? 'rgb(51 65 85)' : 'rgb(226, 232, 240)',
-                    color: isDark ? 'white' : 'black'
-                  }} 
-                  labelStyle={{color: isDark ? 'white' : 'black'}}
-                />
-                <Legend wrapperStyle={{fontSize: '14px'}}/>
-                <Bar dataKey="points" fill="#ea580c" name="Points" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="rebounds" fill="#3b82f6" name="Rebounds" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="assists" fill="#10b981" name="Assists" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(128, 128, 128, 0.2)" : "rgba(200, 200, 200, 0.5)"}/>
+                  <XAxis dataKey="name" tick={{fontSize: 12, fill: isDark ? 'rgb(156 163 175)' : 'rgb(100 116 139)'}} interval={0} angle={-15} textAnchor="end" height={60} />
+                  <YAxis tick={{fontSize: 12, fill: isDark ? 'rgb(156 163 175)' : 'rgb(100 116 139)'}}/>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)', 
+                      borderColor: isDark ? 'rgb(51 65 85)' : 'rgb(226, 232, 240)',
+                      color: isDark ? 'white' : 'black'
+                    }} 
+                    labelStyle={{color: isDark ? 'white' : 'black'}}
+                  />
+                  <Legend wrapperStyle={{fontSize: '14px'}}/>
+                  <Bar dataKey="points" fill="#ea580c" name="Points" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="rebounds" fill="#3b82f6" name="Rebounds" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="assists" fill="#10b981" name="Assists" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400">No stats data available to display chart.</div>
+            )}
           </div>
         </div>
 
@@ -86,13 +91,13 @@ const Home: React.FC = () => {
                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
                   <div className="text-orange-600 dark:text-orange-400 text-sm font-medium">Matches Played</div>
                   <div className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                    {data.matches.filter(m => m.isPlayed && (m.homeTeamId === mainTeam?.id || m.awayTeamId === mainTeam?.id)).length}
+                    {appData.matches.filter(m => m.isPlayed && (m.homeTeamId === mainTeam?.id || m.awayTeamId === mainTeam?.id)).length}
                   </div>
                </div>
                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                   <div className="text-blue-600 dark:text-blue-400 text-sm font-medium">Roster Size</div>
                   <div className="text-3xl font-bold text-slate-800 dark:text-slate-100">
-                    {data.players.filter(p => p.teamId === mainTeam?.id && p.number <= 900).length}
+                    {appData.players.filter(p => p.teamId === mainTeam?.id && p.number <= 900).length}
                   </div>
                </div>
             </div>
@@ -101,14 +106,14 @@ const Home: React.FC = () => {
           <div className="bg-slate-900 text-white dark:bg-slate-800 dark:border dark:border-slate-700 p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-bold mb-2">Next Match</h2>
             {(() => {
-              const nextMatch = data.matches
+              const nextMatch = appData.matches
                 .filter(m => !m.isPlayed)
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
               
               if (!nextMatch) return <p className="text-slate-400">No upcoming matches scheduled.</p>;
               
-              const home = data.teams.find(t => t.id === nextMatch.homeTeamId);
-              const away = data.teams.find(t => t.id === nextMatch.awayTeamId);
+              const home = appData.teams.find(t => t.id === nextMatch.homeTeamId);
+              const away = appData.teams.find(t => t.id === nextMatch.awayTeamId);
 
               return (
                 <div>

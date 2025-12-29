@@ -1,28 +1,97 @@
-import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../services/supabase';
-import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import { AppData } from '../types';
-import { getDB, saveDB } from '../services/storage';
+import { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { AppData, League, Match, Player, PlayerStats, Settings, Team } from '../types';
+
+// Helper to get initial settings from local storage
+const getInitialSettings = (): Settings => {
+    const stored = localStorage.getItem('basketstats_settings');
+    if (stored) return JSON.parse(stored);
+    return {
+        theme: 'light',
+        appName: 'BasketStats Pro',
+        appLogoUrl: ''
+    };
+};
+
+const defaultAppData: AppData = {
+    leagues: [],
+    teams: [],
+    players: [],
+    matches: [],
+    stats: [],
+    users: [], // User management is handled by Supabase Auth now
+    settings: getInitialSettings()
+};
 
 interface AppContextType {
-  user: User | null;
+  user: SupabaseUser | null;
   session: Session | null;
-  appData: AppData | null;
+  appData: AppData;
   loadingAuth: boolean;
   loadingData: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateAppData: (data: AppData) => Promise<void>;
+  // Data manipulation functions
+  addLeague: (league: Partial<League>) => Promise<League | null>;
+  deleteLeague: (id: string) => Promise<void>;
+  addTeam: (team: Partial<Team>) => Promise<Team | null>;
+  updateTeam: (id: string, updates: Partial<Team>) => Promise<Team | null>;
+  deleteTeam: (id: string) => Promise<void>;
+  addPlayer: (player: Partial<Player>) => Promise<Player | null>;
+  updatePlayer: (id: string, updates: Partial<Player>) => Promise<Player | null>;
+  deletePlayer: (id: string) => Promise<void>;
+  addMatch: (match: Partial<Match>) => Promise<Match | null>;
+  updateMatch: (id: string, updates: Partial<Match>) => Promise<Match | null>;
+  deleteMatch: (id: string) => Promise<void>;
+  saveStatsForMatch: (matchId: string, stats: PlayerStats[], scores: any, playersToCreate: Partial<Player>[]) => Promise<void>;
+  updateSettings: (settings: Settings) => void;
 }
 
 export const AppContext = createContext<AppContextType>({} as AppContextType);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [appData, setAppData] = useState<AppData | null>(null);
+  const [appData, setAppData] = useState<AppData>(defaultAppData);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [loadingData, setLoadingData] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Data loading from Supabase
+  const loadAppData = async () => {
+      setLoadingData(true);
+      try {
+          const [leaguesRes, teamsRes, playersRes, matchesRes, statsRes] = await Promise.all([
+              supabase.from('leagues').select('*'),
+              supabase.from('teams').select('*'),
+              supabase.from('players').select('*'),
+              supabase.from('matches').select('*'),
+              supabase.from('player_stats').select('*')
+          ]);
+
+          if (leaguesRes.error) throw leaguesRes.error;
+          if (teamsRes.error) throw teamsRes.error;
+          if (playersRes.error) throw playersRes.error;
+          if (matchesRes.error) throw matchesRes.error;
+          if (statsRes.error) throw statsRes.error;
+
+          setAppData({
+              leagues: leaguesRes.data as League[],
+              teams: teamsRes.data as Team[],
+              players: playersRes.data as Player[],
+              matches: matchesRes.data as Match[],
+              stats: statsRes.data as PlayerStats[],
+              users: [],
+              settings: getInitialSettings()
+          });
+      } catch (error) {
+          console.error("Error loading app data:", error);
+          // Set empty data on error
+          setAppData(defaultAppData);
+      } finally {
+          setLoadingData(false);
+      }
+  };
 
   useEffect(() => {
     const getInitialSession = async () => {
@@ -30,9 +99,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setSession(session);
       setUser(session?.user ?? null);
       setLoadingAuth(false);
-      
       if (session?.user) {
-        loadInitialData();
+        await loadAppData();
+      } else {
+        setLoadingData(false);
       }
     };
     
@@ -43,10 +113,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSession(session);
         setUser(session?.user ?? null);
         if (event === 'SIGNED_IN') {
-          loadInitialData();
+          await loadAppData();
         }
         if (event === 'SIGNED_OUT') {
-          setAppData(null);
+          setAppData(defaultAppData);
         }
       }
     );
@@ -55,14 +125,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       authListener.subscription.unsubscribe();
     };
   }, []);
-  
-  const loadInitialData = async () => {
-      setLoadingData(true);
-      const data = getDB(); // Ancora da localStorage per ora
-      setAppData(data);
-      setLoadingData(false);
-  }
 
+  // --- AUTH METHODS ---
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -73,15 +137,110 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (error) throw error;
   };
 
-  const updateAppData = async (data: AppData) => {
-    // Per ora, continuiamo a salvare localmente.
-    // Questo verrà sostituito con chiamate a Supabase.
-    setAppData(data);
-    saveDB(data);
+  // --- DATA CUD (Create, Update, Delete) METHODS ---
+
+  const addLeague = async (leagueData: Partial<League>) => {
+      const { data, error } = await supabase.from('leagues').insert(leagueData).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({ ...prev, leagues: [...prev.leagues, data] }));
+      return data;
+  };
+  const deleteLeague = async (id: string) => {
+      const { error } = await supabase.from('leagues').delete().eq('id', id);
+      if (error) throw error;
+      setAppData(prev => ({...prev, leagues: prev.leagues.filter(l => l.id !== id) }));
+  };
+  
+  const addTeam = async (teamData: Partial<Team>) => {
+      const { data, error } = await supabase.from('teams').insert(teamData).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({ ...prev, teams: [...prev.teams, data] }));
+      return data;
+  };
+  const updateTeam = async (id: string, updates: Partial<Team>) => {
+      const { data, error } = await supabase.from('teams').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({ ...prev, teams: prev.teams.map(t => t.id === id ? data : t) }));
+      return data;
+  };
+  const deleteTeam = async (id: string) => {
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+      if (error) throw error;
+      setAppData(prev => ({...prev, teams: prev.teams.filter(t => t.id !== id) }));
+  };
+
+  const addPlayer = async (playerData: Partial<Player>) => {
+      const { data, error } = await supabase.from('players').insert(playerData).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({ ...prev, players: [...prev.players, data] }));
+      return data;
+  };
+  const updatePlayer = async (id: string, updates: Partial<Player>) => {
+      const { data, error } = await supabase.from('players').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({...prev, players: prev.players.map(p => p.id === id ? data : p) }));
+      return data;
+  };
+  const deletePlayer = async (id: string) => {
+      const { error } = await supabase.from('players').delete().eq('id', id);
+      if (error) throw error;
+      setAppData(prev => ({...prev, players: prev.players.filter(p => p.id !== id) }));
+  };
+
+  const addMatch = async (matchData: Partial<Match>) => {
+      const { data, error } = await supabase.from('matches').insert(matchData).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({...prev, matches: [...prev.matches, data] }));
+      return data;
+  };
+  const updateMatch = async (id: string, updates: Partial<Match>) => {
+      const { data, error } = await supabase.from('matches').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      if (data) setAppData(prev => ({ ...prev, matches: prev.matches.map(m => m.id === id ? data : m) }));
+      return data;
+  };
+  const deleteMatch = async (id: string) => {
+      const { error } = await supabase.from('matches').delete().eq('id', id);
+      if (error) throw error;
+      setAppData(prev => ({ ...prev, matches: prev.matches.filter(m => m.id !== id) }));
+  };
+
+  const saveStatsForMatch = async (matchId: string, stats: PlayerStats[], scores: any, playersToCreate: Partial<Player>[]) => {
+      if (playersToCreate.length > 0) {
+          const { error: playerError } = await supabase.from('players').upsert(playersToCreate, { onConflict: 'id' });
+          if (playerError) throw playerError;
+      }
+      const { error: deleteError } = await supabase.from('player_stats').delete().eq('matchId', matchId);
+      if (deleteError) throw deleteError;
+      if (stats.length > 0) {
+        const { error: insertError } = await supabase.from('player_stats').insert(stats);
+        if (insertError) throw insertError;
+      }
+      const { error: matchError } = await supabase.from('matches').update(scores).eq('id', matchId);
+      if (matchError) throw matchError;
+
+      // Reload all data to ensure consistency
+      await loadAppData();
+  };
+
+  const updateSettings = (settings: Settings) => {
+      localStorage.setItem('basketstats_settings', JSON.stringify(settings));
+      setAppData(prev => ({...prev, settings}));
+  };
+
+  const contextValue = {
+    user, session, appData, loadingAuth, loadingData,
+    login, logout,
+    addLeague, deleteLeague,
+    addTeam, updateTeam, deleteTeam,
+    addPlayer, updatePlayer, deletePlayer,
+    addMatch, updateMatch, deleteMatch,
+    saveStatsForMatch,
+    updateSettings
   };
 
   return (
-    <AppContext.Provider value={{ user, session, appData, loadingAuth, loadingData, login, logout, updateAppData }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

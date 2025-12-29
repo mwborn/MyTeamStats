@@ -1,21 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { getDB } from '../services/storage';
-import { AppData, Player, Team, Match, PlayerStats } from '../types';
-import { Download, Filter } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+import { Download, Filter, Loader2 } from 'lucide-react';
 
 const TeamStats: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { appData, loadingData } = useContext(AppContext);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   useEffect(() => {
-    const db = getDB();
-    setData(db);
-    const mainTeam = db.teams.find(t => t.isMain);
-    if (mainTeam) setSelectedTeamId(mainTeam.id);
-  }, []);
+    if (appData) {
+      const mainTeam = appData.teams.find(t => t.isMain);
+      if (mainTeam) setSelectedTeamId(mainTeam.id);
+    }
+  }, [appData]);
 
-  if (!data) return <div>Loading...</div>;
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-orange-500" size={32} />
+      </div>
+    );
+  }
 
   const formatPercentage = (made: number, att: number) => {
     if (att === 0) return '0%';
@@ -27,14 +32,14 @@ const TeamStats: React.FC = () => {
     return (num / den).toFixed(decimals);
   };
 
-  const matches = data.matches.filter(m => {
+  const matches = appData.matches.filter(m => {
     const leagueMatch = !selectedLeagueId || m.leagueId === selectedLeagueId;
     const teamMatch = m.homeTeamId === selectedTeamId || m.awayTeamId === selectedTeamId;
     return leagueMatch && teamMatch && m.isPlayed;
   });
 
-  const team = data.teams.find(t => t.id === selectedTeamId);
-  const players = data.players.filter(p => p.teamId === selectedTeamId && p.number <= 900);
+  const team = appData.teams.find(t => t.id === selectedTeamId);
+  const players = appData.players.filter(p => p.teamId === selectedTeamId && p.number <= 900);
 
   let teamTotals = { gamesPlayed: matches.length, wins: 0, pointsScored: 0, pointsConceded: 0, quartersScored: [0, 0, 0, 0, 0, 0], quartersConceded: [0, 0, 0, 0, 0, 0] };
 
@@ -54,7 +59,7 @@ const TeamStats: React.FC = () => {
   });
 
   const playerAggregates = players.map(player => {
-    const pStats = data.stats.filter(s => s.playerId === player.id && matches.some(m => m.id === s.matchId));
+    const pStats = appData.stats.filter(s => s.playerId === player.id && matches.some(m => m.id === s.matchId));
     const agg = pStats.reduce((acc, curr) => ({
       games: acc.games + 1, minutes: acc.minutes + curr.minutes, points: acc.points + curr.points, twoPtMade: acc.twoPtMade + curr.twoPtMade, twoPtAtt: acc.twoPtAtt + curr.twoPtAtt, threePtMade: acc.threePtMade + curr.threePtMade, threePtAtt: acc.threePtAtt + curr.threePtAtt, ftMade: acc.ftMade + curr.ftMade, ftAtt: acc.ftAtt + curr.ftAtt, rebDef: acc.rebDef + curr.rebDef, rebOff: acc.rebOff + curr.rebOff, foulsCommitted: acc.foulsCommitted + curr.foulsCommitted, foulsDrawn: acc.foulsDrawn + curr.foulsDrawn, turnovers: acc.turnovers + curr.turnovers, steals: acc.steals + curr.steals, assists: acc.assists + curr.assists, blocksMade: acc.blocksMade + curr.blocksMade, blocksRec: acc.blocksRec + curr.blocksRec, valuation: acc.valuation + curr.valuation, plusMinus: acc.plusMinus + curr.plusMinus
     }), { games: 0, minutes: 0, points: 0, twoPtMade: 0, twoPtAtt: 0, threePtMade: 0, threePtAtt: 0, ftMade: 0, ftAtt: 0, rebDef: 0, rebOff: 0, foulsCommitted: 0, foulsDrawn: 0, turnovers: 0, steals: 0, assists: 0, blocksMade: 0, blocksRec: 0, valuation: 0, plusMinus: 0 });
@@ -73,14 +78,14 @@ const TeamStats: React.FC = () => {
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">League</label>
             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedLeagueId} onChange={e => setSelectedLeagueId(e.target.value)}>
               <option value="">All Leagues</option>
-              {data.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              {appData.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
          </div>
          <div>
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Team</label>
             <select className="px-3 py-2 border dark:border-slate-600 rounded-lg text-sm min-w-[200px] bg-white dark:bg-slate-700" value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)}>
               <option value="">Select Team</option>
-              {data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {appData.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
          </div>
          <div className="flex-1 text-right">
@@ -99,7 +104,7 @@ const TeamStats: React.FC = () => {
                         {team.logoUrl && <img src={team.logoUrl} className="w-16 h-16 bg-white rounded-full p-1" />}
                         <div>
                             <h1 className="text-xl font-bold text-green-500 uppercase tracking-widest">{team.name}</h1>
-                            <div className="text-xs text-slate-400">{data.leagues.find(l => l.id === selectedLeagueId)?.name || 'Season Totals'}</div>
+                            <div className="text-xs text-slate-400">{appData.leagues.find(l => l.id === selectedLeagueId)?.name || 'Season Totals'}</div>
                         </div>
                      </div>
                      <div className="space-y-1 text-sm font-mono"><div className="flex justify-between border-b border-slate-800 pb-1"><span className="text-red-500">TOTALE FATTI</span><span className="text-xl font-bold font-digital text-red-500">{teamTotals.pointsScored}</span></div><div className="flex justify-between pt-1"><span className="text-yellow-500">TOTALE SUBITI</span><span className="text-xl font-bold font-digital text-yellow-500">{teamTotals.pointsConceded}</span></div></div>

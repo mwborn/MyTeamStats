@@ -1,38 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { getDB, saveDB } from '../services/storage';
-import { AppData, Match } from '../types';
-import { Plus, Save, X, Edit2, Trash2 } from 'lucide-react';
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+import { Match } from '../types';
+import { Plus, Save, X, Edit2, Trash2, Loader2 } from 'lucide-react';
 
 const Schedule: React.FC = () => {
-  const [data, setData] = useState<AppData | null>(null);
+  const { 
+    appData, loadingData,
+    addMatch, updateMatch, deleteMatch 
+  } = useContext(AppContext);
+
   const [matchForm, setMatchForm] = useState<Partial<Match>>({ round: 'Andata' });
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setData(getDB());
-  }, []);
 
   const handleFormChange = (field: keyof Match, value: any) => {
     setMatchForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveMatch = () => {
-    if (!data || !matchForm.leagueId || !matchForm.homeTeamId || !matchForm.awayTeamId) return;
+  const handleSaveMatch = async () => {
+    if (!appData || !matchForm.leagueId || !matchForm.homeTeamId || !matchForm.awayTeamId) return;
     
-    let newMatches = [...data.matches];
     if (editingMatchId) {
-        newMatches = newMatches.map(m => m.id === editingMatchId ? { ...m, ...matchForm } as Match : m);
+        await updateMatch(editingMatchId, matchForm);
     } else {
-        const newMatch: Match = {
-          id: `m${Date.now()}`,
+        const newMatchData: Partial<Match> = {
           ...matchForm,
           isPlayed: false
-        } as Match;
-        newMatches.push(newMatch);
+        };
+        await addMatch(newMatchData);
     }
-
-    saveDB({ ...data, matches: newMatches });
-    setData(getDB());
     resetForm();
   };
 
@@ -41,12 +36,12 @@ const Schedule: React.FC = () => {
     setMatchForm(match);
   };
 
-  const handleDeleteMatch = (matchId: string) => {
-      if (!data) return;
-      const matchToDelete = data.matches.find(m => m.id === matchId);
+  const handleDeleteMatch = async (matchId: string) => {
+      if (!appData) return;
+      const matchToDelete = appData.matches.find(m => m.id === matchId);
       if (!matchToDelete) return;
 
-      const statsCount = data.stats.filter(s => s.matchId === matchId).length;
+      const statsCount = appData.stats.filter(s => s.matchId === matchId).length;
       let message = `Are you sure you want to delete this match?`;
       if (statsCount > 0) {
           message = `⚠️ WARNING ⚠️\n\nThis match has ${statsCount} player stats records associated with it. Deleting the match will also PERMANENTLY ERASE these stats.\n\nAre you sure you want to proceed?`;
@@ -54,11 +49,7 @@ const Schedule: React.FC = () => {
 
       if (!window.confirm(message)) return;
 
-      const newMatches = data.matches.filter(m => m.id !== matchId);
-      const newStats = data.stats.filter(s => s.matchId !== matchId);
-      
-      saveDB({ ...data, matches: newMatches, stats: newStats });
-      setData(getDB());
+      await deleteMatch(matchId);
   };
 
   const resetForm = () => {
@@ -66,7 +57,13 @@ const Schedule: React.FC = () => {
     setMatchForm({ round: 'Andata' });
   };
 
-  if (!data) return <div>Loading...</div>;
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-orange-500" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,7 +78,7 @@ const Schedule: React.FC = () => {
              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">League</label>
              <select className="w-full px-2 py-2 border dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700" value={matchForm.leagueId || ''} onChange={e => handleFormChange('leagueId', e.target.value)}>
                <option value="">Select...</option>
-               {data.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+               {appData.leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
              </select>
           </div>
           <div>
@@ -103,14 +100,14 @@ const Schedule: React.FC = () => {
              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Home</label>
              <select className="w-full px-2 py-2 border dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700" value={matchForm.homeTeamId || ''} onChange={e => handleFormChange('homeTeamId', e.target.value)}>
                <option value="">Select...</option>
-               {data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+               {appData.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
              </select>
           </div>
           <div>
              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Away</label>
              <select className="w-full px-2 py-2 border dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-700" value={matchForm.awayTeamId || ''} onChange={e => handleFormChange('awayTeamId', e.target.value)}>
                <option value="">Select...</option>
-               {data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+               {appData.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
              </select>
           </div>
           <div className="flex gap-2">
@@ -138,10 +135,10 @@ const Schedule: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {data.matches.sort((a,b) => b.matchNumber - a.matchNumber).map(match => {
-              const home = data.teams.find(t => t.id === match.homeTeamId);
-              const away = data.teams.find(t => t.id === match.awayTeamId);
-              const league = data.leagues.find(l => l.id === match.leagueId);
+            {appData.matches.sort((a,b) => (b.matchNumber || 0) - (a.matchNumber || 0)).map(match => {
+              const home = appData.teams.find(t => t.id === match.homeTeamId);
+              const away = appData.teams.find(t => t.id === match.awayTeamId);
+              const league = appData.leagues.find(l => l.id === match.leagueId);
               const formatQuarters = () => {
                 if (!match.quarters) return '';
                 const hQ = match.quarters.home.filter((s, i) => s > 0 || match.quarters.away[i] > 0);
