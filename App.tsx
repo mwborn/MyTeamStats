@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
-// FIX: react-router-dom v6 components are not available, switching to v5 compatible components.
-import { HashRouter, Switch, Route, Redirect } from 'react-router-dom';
+// Fix: Import useLocation to get the current path.
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Roster from './pages/Roster';
@@ -15,9 +15,11 @@ import { AppProvider, AppContext } from './context/AppContext';
 import { hasPermission } from './services/auth';
 import { Loader2 } from 'lucide-react';
 
-// FIX: Update ProtectedRoute for react-router-dom v5.
-const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path: string }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, loadingAuth } = useContext(AppContext);
+  // Fix: Use useLocation to get the current path instead of trying to access a non-existent prop.
+  const location = useLocation();
+  const path = location.pathname;
 
   if (loadingAuth) {
     return (
@@ -28,13 +30,13 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactElement, path
   }
 
   if (!user) {
-    // FIX: Use Redirect component for v5.
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
   // Nota: il ruolo dell'utente non è ancora nel DB, quindi questa logica verrà ripristinata
   // quando migreremo anche la tabella utenti. Per ora, permettiamo l'accesso.
-  // if (!hasPermission(user.role, path)) {
+  // const userRole = 'admin'; // Placeholder
+  // if (!hasPermission(userRole, path)) {
   //   return (
   //       <div className="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-xl">
   //           <h2 className="text-xl font-bold mb-2">Access Denied</h2>
@@ -60,21 +62,20 @@ const AppRoutes: React.FC = () => {
 
     return (
         <Layout>
-            {/* FIX: Use Switch and render prop for v5, instead of Routes and element prop from v6 */}
-            <Switch>
-                <Route path="/login" component={Login} />
+            <Routes>
+                <Route path="/login" element={<Login />} />
                 
-                <Route path="/" exact render={() => <ProtectedRoute path="/" children={<Home />} />} />
-                <Route path="/roster" render={() => <ProtectedRoute path="/roster" children={<Roster />} />} />
-                <Route path="/schedule" render={() => <ProtectedRoute path="/schedule" children={<Schedule />} />} />
-                <Route path="/import" render={() => <ProtectedRoute path="/import" children={<Import />} />} />
-                <Route path="/report" render={() => <ProtectedRoute path="/report" children={<GameReport />} />} />
-                <Route path="/team-stats" render={() => <ProtectedRoute path="/team-stats" children={<TeamStats />} />} />
-                <Route path="/users" render={() => <ProtectedRoute path="/users" children={<UserManagement />} />} />
-                <Route path="/setup" render={() => <ProtectedRoute path="/setup" children={<Setup />} />} />
+                <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route path="/roster" element={<ProtectedRoute><Roster /></ProtectedRoute>} />
+                <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+                <Route path="/import" element={<ProtectedRoute><Import /></ProtectedRoute>} />
+                <Route path="/report" element={<ProtectedRoute><GameReport /></ProtectedRoute>} />
+                <Route path="/team-stats" element={<ProtectedRoute><TeamStats /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
 
-                <Route path="*" render={() => user ? <Redirect to="/" /> : <Redirect to="/login" />} />
-            </Switch>
+                <Route path="*" element={user ? <Navigate to="/" /> : <Navigate to="/login" />} />
+            </Routes>
         </Layout>
     )
 }

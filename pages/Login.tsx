@@ -1,6 +1,5 @@
 import React, { useState, useContext } from 'react';
-// FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { Lock, User as UserIcon, Loader2 } from 'lucide-react';
 
@@ -10,8 +9,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AppContext);
-  // FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,8 +17,7 @@ const Login: React.FC = () => {
     setError('');
     try {
       await login(email, password);
-      // FIX: Use history.push for navigation in v5.
-      history.push('/');
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {

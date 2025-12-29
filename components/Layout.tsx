@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-// FIX: react-router-dom v6 components are not available, switching to v5 compatible components.
-import { NavLink, useHistory, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Calendar, Upload, BarChart3, Menu, X, PieChart, Shield, LogOut, Settings } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { hasPermission } from '../services/auth';
@@ -11,8 +10,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout } = useContext(AppContext);
   const [appSettings, setAppSettings] = useState(getDB().settings);
-  // FIX: useNavigate is a v6 hook, useHistory is the v5 equivalent.
-  const history = useHistory();
+  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -31,8 +29,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleLogout = async () => {
       await logout();
-      // FIX: Use history.push for navigation in v5.
-      history.push('/login');
+      navigate('/login');
   };
 
   if (location.pathname === '/login') {
@@ -92,11 +89,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <NavLink
               key={item.to}
               to={item.to}
-              exact={item.to === '/'}
+              end={item.to === '/'}
               onClick={() => setIsSidebarOpen(false)}
-              // FIX: `className` with a function is a v6 feature. Use `activeClassName` for v5.
-              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"
-              activeClassName="bg-orange-600 text-white"
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                ${isActive ? 'bg-orange-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+              `}
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
