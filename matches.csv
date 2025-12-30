@@ -1,0 +1,5 @@
+id,leagueId,matchNumber,round,date,time,homeTeamId,awayTeamId,homeScore,awayScore,quarters,isPlayed
+"m01","c0a8f8b0-8f6a-4b0a-9b1a-8f0a0d7e6c0f",1,"Andata","2024-09-15","21:00","a0b1c2d3-e4f5-6a7b-8c9d-0a1b2c3d4e5f","b1c2d3e4-f5a6-7b8c-9d0a-1b2c3d4e5f6a",78,75,"{""home"": [20, 18, 22, 18], ""away"": [19, 20, 16, 20]}",true
+"m02","d1b9e9c1-9g7b-5c1b-ac2b-9g1b1e8f7d1g",1,"Andata","2024-09-22","18:00","d3e4f5a6-b7c8-9d0a-1b2c-3d4e5f6a7b8c","a0b1c2d3-e4f5-6a7b-8c9d-0a1b2c3d4e5f",65,82,"{""home"": [15, 17, 20, 13], ""away"": [22, 20, 18, 22]}",true
+"m03","c0a8f8b0-8f6a-4b0a-9b1a-8f0a0d7e6c0f",2,"Andata","2024-09-29","18:30","c2d3e4f5-a6b7-8c9d-0a1b-2c3d4e5f6a7b","a0b1c2d3-e4f5-6a7b-8c9d-0a1b2c3d4e5f",,,false
+"m04","d1b9e9c1-9g7b-5c1b-ac2b-9g1b1e8f7d1g",2,"Andata","2024-10-06","20:45","a0b1c2d3-e4f5-6a7b-8c9d-0a1b2c3d4e5f","d3e4f5a6-b7c8-9d0a-1b2c-3d4e5f6a7b8c",,,false

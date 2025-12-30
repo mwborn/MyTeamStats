@@ -206,20 +206,50 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const saveStatsForMatch = async (matchId: string, stats: PlayerStats[], scores: any, playersToCreate: Partial<Player>[]) => {
+      // Create a map to link temporary string IDs to their player number for later retrieval.
+      const tempIdToPlayerNumberMap = new Map<string, number>();
+      playersToCreate.forEach(p => {
+          if(p.id && p.number) tempIdToPlayerNumberMap.set(p.id, p.number)
+      });
+      
+      // Create new "virtual" players if they don't exist (e.g., for bench or opponent totals).
       if (playersToCreate.length > 0) {
-          const { error: playerError } = await supabase.from('players').upsert(playersToCreate, { onConflict: 'id' });
+          // Remove the temporary string ID before inserting, so the DB can generate a real UUID.
+          const creationPayload = playersToCreate.map(({ id, ...rest }) => rest);
+          const { data: newPlayers, error: playerError } = await supabase.from('players').insert(creationPayload).select();
           if (playerError) throw playerError;
+
+          // After creation, map the new UUIDs back to the original stats objects.
+          const newPlayerMap = new Map<number, string>(); // map number to new UUID
+          if(newPlayers) {
+              newPlayers.forEach(p => newPlayerMap.set(p.number, p.id));
+          }
+
+          // Replace temporary IDs in the stats array with the new, real UUIDs.
+          stats = stats.map(stat => {
+              const playerNumber = tempIdToPlayerNumberMap.get(stat.playerId);
+              if (playerNumber && newPlayerMap.has(playerNumber)) {
+                  stat.playerId = newPlayerMap.get(playerNumber)!;
+              }
+              return stat;
+          });
       }
+      
+      // Clear any existing stats for this match before inserting new ones.
       const { error: deleteError } = await supabase.from('player_stats').delete().eq('matchId', matchId);
       if (deleteError) throw deleteError;
+
+      // Insert the corrected stats. This will no longer fail with a UUID error.
       if (stats.length > 0) {
         const { error: insertError } = await supabase.from('player_stats').insert(stats);
         if (insertError) throw insertError;
       }
+      
+      // Update the match score.
       const { error: matchError } = await supabase.from('matches').update(scores).eq('id', matchId);
       if (matchError) throw matchError;
 
-      // Reload all data to ensure consistency
+      // Reload all data to ensure the UI is consistent with the database.
       await loadAppData();
   };
 
